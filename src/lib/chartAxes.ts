@@ -1,5 +1,6 @@
-import type { Initiative, ScenarioKey } from '../types'
+import type { ImpactThresholds, Initiative, ScenarioKey } from '../types'
 import { isComplete, scenarioKeys } from './assessment'
+import { defaultThresholds, effectiveImpact } from './economics'
 
 export type AxisMode = 'fit' | 'full'
 export type AxisBounds = {
@@ -18,11 +19,11 @@ const niceStep = (target: number) => {
 
 export function chartAxisBounds(
   items: Initiative[], scenario: ScenarioKey, mode: AxisMode,
-  lockAcrossScenarios: boolean, fullY: [number, number],
+  lockAcrossScenarios: boolean, fullY: [number, number], thresholds:ImpactThresholds=defaultThresholds,
 ): AxisBounds {
   const keys = mode === 'fit' && lockAcrossScenarios ? scenarioKeys : [scenario]
-  const values = items.flatMap(item => keys.filter(key => isComplete(item, key)).map(key => ({
-    impact: item.scenarios[key].impact as number,
+  const values = items.flatMap(item => keys.filter(key => isComplete(item, key,thresholds)).map(key => ({
+    impact: effectiveImpact(item,key,thresholds) as number,
     months: item.scenarios[key].months as number,
   })))
   if (mode === 'full' || values.length === 0) {
