@@ -41,7 +41,7 @@ The guide uses a visible *limiting-assumption rule*: each selected option states
 
 Open **Assumption evidence** to note source class, optional reference, rationale, and pilot validation for each assumption. Missing evidence is flagged but does not lower potential impact. Pilot work should test the incremental effect against current practice, the relevant deployment scope, and whether Accor realizes value. Strategic dependencies may inform management discussion but do not automatically raise CRM impact.
 
-Selecting a chart bubble opens **Business Impact Decision Rationale**. It explains the current scenario, shows the three assumptions and evidence gaps, and previews a different finding for any assumption. The preview runs the same guide rule without changing the saved scenario or management-confirmed chart rating. A lower suggested impact prompts reconsideration alongside time to value, pilot investment, urgency, and feasibility; the app does not decide which pilot to run.
+Selecting a chart bubble opens a compact **Business Impact Decision Rationale** with three assumptions, the critical uncertainty, an illustrative sensitivity, and evidence status. Expand **View detailed reasoning & evidence** for definitions, source notes, pilot validation, scenario comparisons, and interactive counterfactuals. The preview runs the same guide rule without changing the saved scenario or management-confirmed chart rating. A lower suggested impact prompts reconsideration alongside time to value, pilot investment, urgency, and feasibility; the app does not decide which pilot to run.
 
 ## Data and modules
 

@@ -36,7 +36,6 @@ export default function InitiativeInsights({ item, scenario, peers, onEdit }: { 
       <p><b>What could accelerate delivery:</b> {d.decision.accelerators||'Not documented.'}</p>
     </div></details></div>
     {!s.impactAssessment?<div className="insights-copy"><h3>Principal assumptions</h3><p className="insights-preview">{s.assumptions || 'Scenario assumptions not documented.'}</p></div>:null}
-    <div className="insights-copy"><h3>Management interpretation</h3><p className="insights-preview">{managementInterpretation(item, scenario)}</p></div>
-    <details className="insights-more"><summary>Full context</summary><div><p><b>Principal assumptions:</b> {s.assumptions || 'Scenario assumptions not documented.'}</p><p><b>Key uncertainty:</b> {item.validationAssumptions || 'Not documented.'}</p><p><b>Management interpretation:</b> {managementInterpretation(item, scenario)}</p></div></details>
+    <details className="insights-more"><summary>Management interpretation &amp; context</summary><div><p>{managementInterpretation(item, scenario)}</p><p><b>Principal planning assumptions:</b> {s.assumptions || 'Not documented.'}</p><p><b>Additional uncertainty:</b> {item.validationAssumptions || 'Not documented.'}</p></div></details>
   </aside>
 }

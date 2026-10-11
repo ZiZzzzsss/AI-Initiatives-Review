@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { demoPortfolio } from './data'
 import { effectiveImpact, suggestImpact } from './impactGuide'
-import { counterfactualImpact, defaultCounterfactual, impactDecision, impactWhy } from './impactRationale'
+import { counterfactualImpact, defaultCounterfactual, executiveEvidence, executiveSensitivity, executiveWhy, impactDecision, impactWhy, rationaleGuides } from './impactRationale'
 
 describe('Business Impact decision rationale', () => {
   it('derives the three seeded base counterfactuals from the existing guide', () => {
@@ -56,5 +56,34 @@ describe('Business Impact decision rationale', () => {
     const downside = impactDecision(pricing, 'base', 1, portfolio.initiatives)
     expect(downside).toContain('revisit its priority')
     expect(downside).toContain('this preview does not decide the pilot')
+  })
+
+  it('keeps the compact summary and sensitivity aligned across all seeded scenarios', () => {
+    const [pitch, crm, pricing] = demoPortfolio().initiatives
+    for (const item of [pitch, crm, pricing]) {
+      for (const key of ['conservative', 'base', 'optimistic'] as const) {
+        const assessment = item.scenarios[key].impactAssessment!
+        const summary = executiveWhy(assessment)
+        const sensitivity = executiveSensitivity(assessment)
+        expect(summary.length).toBeLessThan(300)
+        expect(sensitivity.question).toBeTruthy()
+        expect(sensitivity.alternativeScore).toBe(counterfactualImpact(assessment, rationaleGuides[assessment.guide].priority, sensitivity.alternative).score)
+        expect(sensitivity.explanation).toContain(`${suggestImpact(assessment).score}/5`)
+        expect(executiveEvidence(assessment)).toContain('Evidence to validate')
+      }
+    }
+    expect(executiveSensitivity(pricing.scenarios.base.impactAssessment!).explanation).toContain('falls from 4/5 to 1/5')
+    expect(executiveSensitivity(crm.scenarios.base.impactAssessment!).explanation).toContain('falls from 4/5 to 2/5')
+    expect(executiveSensitivity(pitch.scenarios.base.impactAssessment!).explanation).toContain('falls from 3/5 to 2/5')
+  })
+
+  it('does not retain a high-impact claim after the binding assumption weakens', () => {
+    const pricing = demoPortfolio().initiatives[2]
+    const assessment = pricing.scenarios.base.impactAssessment!
+    assessment.assumptions.incremental.value = 'negligible'
+    expect(executiveWhy(assessment)).toContain('Incremental pricing improvement (Negligible)')
+    expect(executiveWhy(assessment)).not.toContain('high')
+    expect(executiveSensitivity(assessment).explanation).toContain('rises from 1/5')
+    expect(effectiveImpact(pricing, 'base')).toBe(1)
   })
 })

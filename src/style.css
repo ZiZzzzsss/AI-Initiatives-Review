@@ -80,7 +80,6 @@
 .insights-more>div{padding-top:9px;color:#637b78;line-height:1.45}
 .insights-more p{margin:0 0 8px}
 .insights-more b{color:#315b5f}
-.insights-panel:has(.insights-more[open]) .insights-copy{display:none}
 .insights-edit{flex:none;white-space:nowrap;background:#fff;border:1px solid #bdd4ce;border-radius:6px;color:#286d69;padding:8px 11px;font-size:11px;font-weight:700}
 .insights-edit:hover{background:#f0f7f3}
 @media(max-width:1050px){.explore-grid{display:block}.insights-panel{margin-top:16px}.insights-metrics{grid-template-columns:repeat(4,1fr)}.insights-metrics>div{border-bottom:0!important;border-right:1px solid #e9eeeb;margin-right:9px}.insights-metrics>div:last-child{border-right:0}}
@@ -151,10 +150,23 @@
 .impact-background .form-grid{margin-top:12px}
 .impact-evidence-warning{color:#9a6532!important}
 @media(max-width:760px){.impact-guide-fields,.impact-context,.impact-confirm{grid-template-columns:1fr}.impact-evidence-row{grid-template-columns:1fr}}
-.impact-decision{margin:14px 0 0;padding:15px;border:1px solid #d8e8df;border-radius:9px;background:#f7faf8;color:#385c59}
-.impact-decision h3{font-size:14px;line-height:1.3;color:#224d4e;margin:0 0 5px}
+.impact-decision{margin:14px 0 0;padding:12px;border:1px solid #d8e8df;border-radius:9px;background:#f7faf8;color:#385c59}
+.impact-decision h3{font-size:14px;line-height:1.3;color:#224d4e;margin:0 0 2px}
 .impact-decision h4{font-family:Manrope,Arial,sans-serif;font-size:10px;letter-spacing:.09em;text-transform:uppercase;color:#267168;margin:0 0 6px}
 .impact-decision p,.impact-decision li{font-size:11px;line-height:1.55;margin:0 0 8px}
+.impact-executive-why{font-size:12px!important;line-height:1.45!important;color:#365b55;margin:6px 0!important}
+.impact-executive-override{font-size:11px!important;color:#765830;background:#fff5e6;padding:5px 7px;border-radius:5px;margin:0 0 6px!important}
+.impact-executive-assumptions{margin:0 0 5px}
+.impact-executive-assumptions>div{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:baseline;gap:8px;padding:1px 0;font-size:11px;line-height:1.35}
+.impact-executive-assumptions dt{min-width:0;color:#5c7770}
+.impact-executive-assumptions dd{margin:0;color:#295d56;font-weight:700;text-align:right}
+.impact-executive-uncertainty{margin:0 0 4px!important;color:#3b5e58}
+.impact-executive-uncertainty b{display:block;color:#285e56}
+.impact-executive-uncertainty span{display:block;margin-top:2px}
+.impact-executive-evidence{font-size:10px!important;color:#738781;margin:0!important}
+.impact-decision-details{border-top:1px solid #dfeae5;margin:6px 0 0!important;padding-top:6px}
+.impact-decision-details>summary{font-size:11px}
+.impact-decision-details>div{padding-top:9px}
 .impact-decision-status{font-weight:700;color:#2f6d65!important}
 .impact-decision-block{border-top:1px solid #dfeae5;padding-top:11px;margin-top:11px}
 .impact-assumption-list{list-style:none;padding:0;margin:0}
