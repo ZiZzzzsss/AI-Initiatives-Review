@@ -60,8 +60,7 @@
 .insights-header .eyebrow{min-width:0;padding-top:8px}
 .insights-panel h2{font-size:20px;line-height:1.25;margin:6px 0 7px;color:#203d44}
 .insights-archetype{display:inline-block;padding:6px 8px;background:#edf5f1;border-radius:5px;color:#326b67;font-size:11px;font-weight:700}
-.insights-status{margin:8px 0 11px;color:#748580;font-size:10px;font-weight:700}
-.insights-metrics{display:grid;grid-template-columns:1fr 1fr;border-top:1px solid #e9eeeb;border-bottom:1px solid #e9eeeb}
+.insights-metrics{display:grid;grid-template-columns:1fr 1fr;border-top:1px solid #e9eeeb;border-bottom:1px solid #e9eeeb;margin-top:12px}
 .insights-metrics>div{min-width:0;padding:10px 8px 10px 0;display:flex;flex-direction:column;gap:3px}
 .insights-metrics>div:nth-child(odd){border-right:1px solid #e9eeeb;margin-right:9px}
 .insights-metrics>div:nth-child(-n+2){border-bottom:1px solid #e9eeeb}
@@ -70,6 +69,17 @@
 .insights-metrics small{font-size:9px;color:#899b95}
 .insights-urgency{display:flex;align-items:center;gap:6px}
 .insights-urgency i{display:inline-block;width:10px;height:10px;border-radius:50%;flex:none}
+.insights-gates{border-bottom:1px solid #e9eeeb;padding:10px 0}
+.insights-gate-status{display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:11px;font-weight:700;color:#355b5d}
+.insights-gate-details{margin-top:6px;font-size:10px;color:#52716e}
+.insights-gate-details summary{width:max-content;cursor:pointer;font-weight:700}
+.insights-gate-details ul{list-style:none;padding:7px 0 0;margin:0}
+.insights-gate-details li,.insights-funding{display:flex;align-items:baseline;justify-content:space-between;gap:12px;padding:5px 0;border-bottom:1px solid #edf1ee}
+.insights-gate-details b{color:#315b5f;white-space:nowrap}
+.insights-funding{margin-top:5px;border-bottom:0}
+.insights-funding small{display:block;color:#81938d;font-weight:400}
+.card-statuses{display:flex;flex-direction:column;align-items:flex-start;gap:3px}
+.card-incomplete{font-size:9px;color:#8a7650}
 .insights-copy{border-bottom:1px solid #e9eeeb;padding-top:11px}
 .insights-copy h3{font-size:11px;color:#294f55;margin:0 0 6px}
 .insights-copy p{color:#637b78;font-size:11px;line-height:1.45;margin:0 0 9px}

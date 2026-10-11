@@ -1,4 +1,4 @@
-import type { Descriptor, Initiative, Scenario, ScenarioKey, Urgency } from '../types'
+import type { CheckState, Descriptor, Initiative, Scenario, ScenarioKey, Urgency } from '../types'
 import { feasibilityLabels } from './metadata'
 import { effectiveImpact, missingEvidence, suggestImpact } from './impactGuide'
 export const scenarioNames: Record<ScenarioKey, string> = { conservative: 'Conservative', base: 'Base', optimistic: 'Optimistic' }
@@ -8,6 +8,16 @@ export const validMonths = (n: number | null) => n !== null && Number.isFinite(n
 export const validCost = (n: number | null) => n !== null && Number.isFinite(n) && n >= 0
 export const pilotTotal = (s: Scenario) => s.costMode === 'advanced' ? Object.values(s.costs).reduce((a,b) => a + (Number.isFinite(b) && b >= 0 ? b : 0), 0) : s.pilotCost
 export const isComplete = (i: Initiative, key: ScenarioKey) => Boolean(i.name.trim() && i.archetype && validImpact(effectiveImpact(i,key)) && validMonths(i.scenarios[key].months) && validCost(pilotTotal(i.scenarios[key])) && i.scenarios[key].urgency)
+export const fundingGateLabel = 'Funding or budget approved'
+export const pilotGateLabels = feasibilityLabels.filter(label => label !== fundingGateLabel)
+export const pilotGateState = (i: Initiative, label: string): CheckState => i.feasibility[label] || 'Unconfirmed'
+export type PilotHardGateStatus = 'Passed' | 'Pending' | 'Blocked'
+export const pilotHardGateStatus = (i: Initiative): PilotHardGateStatus => {
+  const states = pilotGateLabels.map(label => pilotGateState(i, label))
+  if (states.includes('Blocked')) return 'Blocked'
+  if (states.includes('Unconfirmed') || states.every(state => state === 'Not Applicable')) return 'Pending'
+  return 'Passed'
+}
 export const readiness = (i: Initiative) => {
   const states = feasibilityLabels.map(k => i.feasibility[k] || 'Unconfirmed')
   if (states.includes('Blocked')) return 'Blocked'
@@ -67,7 +77,7 @@ export const compareSummary = (items: Initiative[], key: ScenarioKey) => {
   if (x.months !== null && y.months !== null && x.months !== y.months) parts.push(`${x.months < y.months ? a.name : b.name} reaches meaningful value sooner`)
   const cx=pilotTotal(x), cy=pilotTotal(y)
   if (cx !== null && cy !== null && cx !== cy) parts.push(`${cx < cy ? a.name : b.name} requires less pilot investment`)
-  const blocked=items.filter(i=>readiness(i)==='Blocked').map(i=>i.name)
+  const blocked=items.filter(i=>pilotHardGateStatus(i)==='Blocked').map(i=>i.name)
   if (blocked.length) parts.push(`${blocked.join(' and ')} ${blocked.length===1?'has':'have'} a blocked feasibility item`)
   return `${parts.length ? parts.join('; ') + '. ' : ''}The preferred investment depends on management objectives, constraints, and the evidence still to validate.`
 }
