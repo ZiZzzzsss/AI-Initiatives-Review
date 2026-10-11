@@ -1,0 +1,102 @@
+import { useEffect, useRef, useState } from 'react'
+import { Archive, ArrowDownToLine, BarChart3, CircleHelp, Copy, Eye, Filter, Menu, Pencil, Plus, RotateCcw, SlidersHorizontal, Trash2, X } from 'lucide-react'
+import type { Initiative, Portfolio, ScenarioKey } from '../types'
+import { compareSummary, isComplete, pilotTotal, readiness, scenarioKeys, scenarioNames } from '../lib/assessment'
+import { chartAxisBounds, type AxisMode } from '../lib/chartAxes'
+import { blankInitiative, cloneInitiative } from '../lib/data'
+import { deleteInitiative, upsertInitiative } from '../lib/portfolio'
+import { archetypes } from '../lib/metadata'
+import { ALL_FUNCTIONS, ALL_REGIONS, BUSINESS_FUNCTIONS, functionLabel, isStandardFunction, isStandardRegion, matchesFunction, matchesRegion, REGION_GROUPS, REGION_SCOPES, regionLabel } from '../lib/classification'
+import { exportCsv, exportJson, loadWorkspace, parseImport, resetWorkspace, saveWorkspace } from '../lib/storage'
+import PortfolioChart from './PortfolioChart'
+import InitiativeInsights from './InitiativeInsights'
+import InitiativeEditor from './InitiativeEditor'
+type View='explore'|'compare'|'summary'
+const money=(n:number|null)=>n===null?'Not assessed':new Intl.NumberFormat('en-GB',{style:'currency',currency:'EUR',maximumFractionDigits:0}).format(n)
+function Status({item,scenario}:{item:Initiative;scenario:ScenarioKey}){const text=!isComplete(item,scenario)?'Incomplete assessment':readiness(item);return <span className={`status ${text==='Blocked'?'status-blocked':text==='Ready to test'?'status-ready':''}`}>{text}</span>}
+function Compare({items,scenario}:{items:Initiative[];scenario:ScenarioKey}){
+  if(items.length<2)return <div className="empty-panel">Select two to four initiatives using the checkboxes in the sidebar.</div>
+  const rows:[string,(i:Initiative)=>string][]=[['Region / scope',regionLabel],['Business function',functionLabel],['Strategic role',i=>i.archetype||'—'],['Business Impact',i=>i.scenarios[scenario].impact===null?'—':`${i.scenarios[scenario].impact}/5`],['Time to value',i=>i.scenarios[scenario].months===null?'—':`${i.scenarios[scenario].months} months`],['Pilot investment',i=>money(pilotTotal(i.scenarios[scenario]))],['Residual urgency',i=>i.scenarios[scenario].urgency||'—'],['Readiness',readiness],['Critical assumption',i=>i.validationAssumptions||'Not recorded'],['Main risks',i=>i.risks||'Not recorded']]
+  return <section className="compare-section"><div className="section-heading"><div><div className="eyebrow">DECISION DISCUSSION</div><h2>Side-by-side trade-offs</h2><p>{scenarioNames[scenario]} assumptions · no automatic winner</p></div></div><div className="compare-callout">{compareSummary(items,scenario)}</div><div className="table-scroll"><table className="compare-table"><thead><tr><th>Dimension</th>{items.map(i=><th key={i.id}>{i.name}</th>)}</tr></thead><tbody>{rows.map(([label,fn])=><tr key={label}><th>{label}</th>{items.map(i=><td key={i.id}>{fn(i)}</td>)}</tr>)}</tbody></table></div></section>
+}
+function Summary({items,scenario}:{items:Initiative[];scenario:ScenarioKey}){return <section className="summary-section"><div className="section-heading"><div><div className="eyebrow">PRESENTATION SUMMARY</div><h2>Portfolio discussion brief</h2><p>{scenarioNames[scenario]} scenario · illustrative planning assumptions</p></div><button className="button-outline" onClick={()=>window.print()}>Print / Save PDF</button></div><div className="summary-intro">This portfolio shows assessed opportunity characteristics, implementation constraints, and uncertainties. It does not rank or select initiatives. All demonstration figures are illustrative and are not actual Accor performance or forecasts.</div>{items.map(i=>{const s=i.scenarios[scenario];return <div className="summary-row" key={i.id}><div><h3>{i.name}</h3><p>{i.archetype} · {regionLabel(i)} · {functionLabel(i)}</p></div><div><b>{s.impact??'—'}/5</b><span>Impact</span></div><div><b>{s.months??'—'} mo</b><span>Time to value</span></div><div><b>{money(pilotTotal(s))}</b><span>Pilot</span></div><div><b>{s.urgency||'—'}</b><span>Urgency</span></div><div><b>{readiness(i)}</b><span>Readiness</span></div><p className="summary-assumption">{s.assumptions||'Scenario assumptions not documented.'}</p></div>})}<p className="summary-footer">Discussion prompts: What constraint matters most now? Which missing evidence would change the decision? Which capability must precede a committed initiative?</p></section>}
+export default function App(){
+  const [workspace,setWorkspace]=useState(loadWorkspace)
+  const portfolio=workspace.portfolios.find(p=>p.id===workspace.activeId)||workspace.portfolios[0]
+  const [scenario,setScenario]=useState<ScenarioKey>('base')
+  const [selectedId,setSelectedId]=useState<string|null>(null)
+  const [compareIds,setCompareIds]=useState<string[]>([])
+  const [view,setView]=useState<View>('explore')
+  const [editing,setEditing]=useState<Initiative|null>(null)
+  const [help,setHelp]=useState(false)
+  const [showArchived,setShowArchived]=useState(false)
+  const [region,setRegion]=useState(ALL_REGIONS)
+  const [fn,setFn]=useState(ALL_FUNCTIONS)
+  const [archetype,setArchetype]=useState('All archetypes')
+  const [axisMax,setAxisMax]=useState(18)
+  const [axisMin,setAxisMin]=useState(0)
+  const [axisMode,setAxisMode]=useState<AxisMode>('fit')
+  const [lockAxes,setLockAxes]=useState(false)
+  const [labels,setLabels]=useState(true)
+  const [overlay,setOverlay]=useState(false)
+  const [menuOpen,setMenuOpen]=useState(false)
+  const [chartMenu,setChartMenu]=useState<'axes'|'display'|null>(null)
+  const fileRef=useRef<HTMLInputElement>(null)
+  const chartMenuRef=useRef<HTMLDivElement>(null)
+  useEffect(()=>saveWorkspace(workspace),[workspace])
+  useEffect(()=>{
+    if(!chartMenu)return
+    const closeOutside=(event:PointerEvent)=>{if(!chartMenuRef.current?.contains(event.target as Node))setChartMenu(null)}
+    const closeEscape=(event:KeyboardEvent)=>{if(event.key==='Escape')setChartMenu(null)}
+    document.addEventListener('pointerdown',closeOutside)
+    document.addEventListener('keydown',closeEscape)
+    return ()=>{document.removeEventListener('pointerdown',closeOutside);document.removeEventListener('keydown',closeEscape)}
+  },[chartMenu])
+  const active=portfolio.initiatives.filter(i=>!i.archived)
+  const filtered=active.filter(i=>matchesRegion(i,region)&&matchesFunction(i,fn)&&(archetype==='All archetypes'||i.archetype===archetype))
+  const selectionPool=view==='explore'?filtered:active
+  const selected=selectionPool.find(i=>i.id===selectedId)||selectionPool[0]
+  const sharedAxes=lockAxes||overlay
+  const bounds=chartAxisBounds(filtered,scenario,axisMode,sharedAxes,[axisMin,axisMax])
+  const sidebarItems=showArchived?[...filtered,...portfolio.initiatives.filter(i=>i.archived)]:filtered
+  const compared=compareIds.map(id=>active.find(i=>i.id===id)).filter((i):i is Initiative=>Boolean(i))
+  const setPortfolio=(next:Portfolio)=>setWorkspace(w=>({...w,portfolios:w.portfolios.map(p=>p.id===next.id?next:p)}))
+  const updateItem=(next:Initiative)=>setPortfolio(upsertInitiative(portfolio,next))
+  const edit=(i:Initiative)=>{setEditing(i);setMenuOpen(false)}
+  const add=()=>edit(blankInitiative())
+  const duplicate=(i:Initiative)=>{const copy=cloneInitiative(i);updateItem(copy);setSelectedId(copy.id)}
+  const archive=(i:Initiative)=>updateItem({...i,archived:!i.archived})
+  const remove=(i:Initiative)=>{if(window.confirm(`Delete ${i.name}? This cannot be undone.`)){setPortfolio(deleteInitiative(portfolio,i.id));setCompareIds(ids=>ids.filter(id=>id!==i.id));if(selectedId===i.id)setSelectedId(null)}}
+  const toggleCompare=(id:string)=>setCompareIds(ids=>ids.includes(id)?ids.filter(x=>x!==id):ids.length<4?[...ids,id]:ids)
+  const createPortfolio=()=>{const name=window.prompt('Portfolio name');if(!name?.trim())return;const p:Portfolio={id:crypto.randomUUID(),name:name.trim(),initiatives:[]};setWorkspace(w=>({portfolios:[...w.portfolios,p],activeId:p.id}));setSelectedId(null);setCompareIds([])}
+  async function importFile(file:File){try{const p=parseImport(await file.text());const id=crypto.randomUUID();const imported={...p,id,name:`${p.name} (imported)`,initiatives:p.initiatives.map(i=>({...i,id:crypto.randomUUID()}))};setWorkspace(w=>({portfolios:[...w.portfolios,imported],activeId:id}));setSelectedId(null);setCompareIds([])}catch(e){window.alert(e instanceof Error?e.message:'Could not import JSON.')}if(fileRef.current)fileRef.current.value=''}
+  return <div className="app-shell"><header className="topbar"><div className="brand"><div className="brand-mark"><BarChart3 size={22}/></div><div><span className="brand-kicker">STRATEGY WORKSPACE</span><h1>AI Initiative Portfolio Explorer</h1></div></div><div className="top-actions"><button className="button-quiet help-button" onClick={()=>setHelp(true)}><CircleHelp size={17}/> Methodology</button><div className="dropdown-wrap"><button className="button-quiet" onClick={()=>setMenuOpen(!menuOpen)}><ArrowDownToLine size={17}/> Import / Export <Menu size={14}/></button>{menuOpen?<div className="dropdown"><button onClick={()=>{fileRef.current?.click();setMenuOpen(false)}}>Import JSON portfolio</button><button onClick={()=>{exportJson(portfolio);setMenuOpen(false)}}>Export JSON portfolio</button><button onClick={()=>{exportCsv(portfolio,scenario);setMenuOpen(false)}}>Export current CSV</button><button onClick={()=>{setView('summary');setMenuOpen(false)}}>Presentation summary</button></div>:null}</div><button className="button-primary" onClick={add}><Plus size={17}/> Add initiative</button></div></header>
+    <input ref={fileRef} className="sr-only" type="file" accept=".json,application/json" onChange={e=>{const f=e.target.files?.[0];if(f)void importFile(f)}}/>
+    <div className="utility-bar"><div className="portfolio-select"><span>PORTFOLIO</span><select value={portfolio.id} onChange={e=>{setWorkspace(w=>({...w,activeId:e.target.value}));setSelectedId(null);setCompareIds([])}}>{workspace.portfolios.map(p=><option value={p.id} key={p.id}>{p.name}</option>)}</select><button title="Create portfolio" aria-label="Create portfolio" onClick={createPortfolio}><Plus size={16}/></button></div><div className="utility-right"><span className="demo-label">Illustrative data — not actual Accor performance or forecasts.</span><button className="text-button" onClick={()=>{if(window.confirm('Replace saved portfolios with the three illustrative initiatives?')){setWorkspace(resetWorkspace());setSelectedId(null);setCompareIds([]);setScenario('base')}}}><RotateCcw size={15}/> Reset demo data</button></div></div>
+    <div className={view==='explore'?'main-layout main-layout-explore':'main-layout'}><aside className="sidebar"><div className="sidebar-heading"><div><span className="eyebrow">INITIATIVES</span><h2>{active.length} opportunities</h2></div><button aria-label="Add initiative" onClick={add}><Plus size={18}/></button></div><div className="sidebar-list">{sidebarItems.map(i=><div key={i.id} className={`initiative-card ${selected?.id===i.id?'selected':''} ${i.archived?'archived':''}`}><div className="card-top"><label title="Compare initiative"><input type="checkbox" aria-label={`Compare ${i.name}`} disabled={i.archived||(!compareIds.includes(i.id)&&compareIds.length>=4)} checked={compareIds.includes(i.id)} onChange={()=>toggleCompare(i.id)}/></label><button className="initiative-name" onClick={()=>{setSelectedId(i.id);setView('explore')}}>{i.name}</button></div><div className="card-meta">{regionLabel(i)} · {functionLabel(i)}</div><div className="card-archetype">{i.archetype||'Archetype unselected'}</div><div className="card-bottom"><Status item={i} scenario={scenario}/><div className="card-actions"><button title="Edit" aria-label={`Edit ${i.name}`} onClick={()=>edit(i)}><Pencil size={14}/></button><button title="Duplicate" aria-label={`Duplicate ${i.name}`} onClick={()=>duplicate(i)}><Copy size={14}/></button><button title={i.archived?'Restore':'Archive'} aria-label={`${i.archived?'Restore':'Archive'} ${i.name}`} onClick={()=>archive(i)}><Archive size={14}/></button><button title="Delete" aria-label={`Delete ${i.name}`} onClick={()=>remove(i)}><Trash2 size={14}/></button></div></div></div>)}{!sidebarItems.length?<p className="sidebar-empty">No initiatives match these filters.</p>:null}</div><button className="archive-toggle" onClick={()=>setShowArchived(!showArchived)}>{showArchived?'Hide':'Show'} archived ({portfolio.initiatives.filter(i=>i.archived).length})</button><div className="sidebar-tip"><b>How to read this map</b><span>Use the axes, size, and urgency together. No single position determines the investment choice.</span></div></aside>
+    <main className="workspace"><div className="workspace-controls"><div className="view-tabs"><button className={view==='explore'?'active':''} onClick={()=>setView('explore')}>Explore</button><button className={view==='compare'?'active':''} onClick={()=>setView('compare')}>Compare {compareIds.length?`(${compareIds.length})`:''}</button><button className={view==='summary'?'active':''} onClick={()=>setView('summary')}>Summary</button></div><div className="scenario-control"><span>PLANNING SCENARIO</span><div>{scenarioKeys.map(k=><button key={k} className={scenario===k?'active':''} onClick={()=>setScenario(k)}>{scenarioNames[k]}</button>)}</div></div></div>
+      {view==='explore'?<>
+        <div className="filterbar">
+          <div className="filter-group"><Filter size={16}/>
+            <select aria-label="Region filter" value={region} onChange={e=>setRegion(e.target.value)}><option value={ALL_REGIONS}>{ALL_REGIONS}</option>{REGION_GROUPS.map(group=><optgroup key={group.name} label={group.name}><option value={group.name}>{group.name}</option>{group.subregions.map(subregion=><option key={subregion} value={subregion}>{subregion}</option>)}</optgroup>)}{REGION_SCOPES.map(scope=><option key={scope} value={scope}>{scope}</option>)}{[...new Set(active.map(i=>i.region).filter(value=>value&&!isStandardRegion(value)))].map(value=><option key={value} value={value}>{value} · needs review</option>)}</select>
+            <select aria-label="Business function filter" value={fn} onChange={e=>setFn(e.target.value)}><option value={ALL_FUNCTIONS}>{ALL_FUNCTIONS}</option>{BUSINESS_FUNCTIONS.map(value=><option key={value} value={value}>{value}</option>)}{[...new Set(active.map(i=>i.function).filter(value=>value&&!isStandardFunction(value)))].map(value=><option key={value} value={value}>{value} · needs review</option>)}</select>
+            <select aria-label="Archetype filter" value={archetype} onChange={e=>setArchetype(e.target.value)}><option>All archetypes</option>{archetypes.map(a=><option key={a.name}>{a.name}</option>)}</select>
+          </div>
+          <div className="chart-display-controls" ref={chartMenuRef}>
+            <div className="chart-control"><button type="button" className={`chart-icon-button ${chartMenu==='axes'?'active':''}`} title="Axis settings" aria-label="Axis settings" aria-expanded={chartMenu==='axes'} aria-controls="axis-settings" onClick={()=>setChartMenu(chartMenu==='axes'?null:'axes')}><SlidersHorizontal size={18}/></button>
+              {chartMenu==='axes'?<div className="chart-control-menu" id="axis-settings"><div className="chart-control-title">Axis scale</div><div className="axis-mode" role="group" aria-label="Chart axis display mode"><button className={axisMode==='fit'?'active':''} onClick={()=>setAxisMode('fit')}>Fit to Initiatives</button><button className={axisMode==='full'?'active':''} onClick={()=>setAxisMode('full')}>Full Scale</button></div><label className="check-inline" title={axisMode==='full'?'Full Scale uses fixed axes':'Use the same axis ranges across Conservative, Base and Optimistic'}><input type="checkbox" checked={axisMode==='full'||sharedAxes} disabled={overlay||axisMode==='full'} onChange={e=>setLockAxes(e.target.checked)}/> Lock axes across scenarios</label>{axisMode==='full'?<div className="full-axis-controls"><label>Min months <select value={axisMin} onChange={e=>setAxisMin(Number(e.target.value))}>{[0,3,6,12].filter(x=>x<axisMax).map(x=><option key={x} value={x}>{x}</option>)}</select></label><label>Max months <select value={axisMax} onChange={e=>{const value=Number(e.target.value);setAxisMax(value);if(axisMin>=value)setAxisMin(0)}}>{[12,18,24,36,60,120].map(x=><option key={x} value={x}>{x}</option>)}</select></label></div>:null}</div>:null}
+            </div>
+            <div className="chart-control"><button type="button" className={`chart-icon-button ${chartMenu==='display'?'active':''}`} title="Display settings" aria-label="Display settings" aria-expanded={chartMenu==='display'} aria-controls="display-settings" onClick={()=>setChartMenu(chartMenu==='display'?null:'display')}><Eye size={18}/></button>
+              {chartMenu==='display'?<div className="chart-control-menu" id="display-settings"><div className="chart-control-title">Display</div><label className="check-inline"><input type="checkbox" checked={labels} onChange={e=>setLabels(e.target.checked)}/> Initiative labels</label><label className="check-inline"><input type="checkbox" checked={overlay} onChange={e=>setOverlay(e.target.checked)}/> Scenario overlay</label></div>:null}
+            </div>
+          </div>
+        </div>
+        {filtered.length?<div className="explore-grid"><PortfolioChart items={filtered} scenario={scenario} selectedId={selected?.id||null} onSelect={setSelectedId} bounds={bounds} mode={axisMode} lockAxes={sharedAxes||axisMode==='full'} labels={labels} overlay={overlay}/><InitiativeInsights item={selected} scenario={scenario} onEdit={()=>{if(selected)edit(selected)}}/></div>:<div className="empty-panel filter-empty">No initiatives match these filters. Try another region, function, or archetype.</div>}
+        {filtered.filter(i=>!isComplete(i,scenario)).length?<div className="incomplete-note">{filtered.filter(i=>!isComplete(i,scenario)).length} incomplete assessment(s) are not plotted as zero.</div>:null}
+      </>:null}
+      {view==='compare'?<Compare items={compared} scenario={scenario}/>:null}{view==='summary'?<Summary items={active} scenario={scenario}/>:null}
+    </main></div>
+    {editing?<InitiativeEditor key={editing.id} initial={editing} onClose={()=>setEditing(null)} onSave={i=>{updateItem(i);setSelectedId(i.id);setEditing(null)}}/>:null}
+    {help?<div className="modal-backdrop" onMouseDown={e=>{if(e.target===e.currentTarget)setHelp(false)}}><div className="help-modal" role="dialog" aria-modal="true" aria-label="Methodology"><button className="icon-button close-help" aria-label="Close help" onClick={()=>setHelp(false)}><X size={20}/></button><div className="eyebrow">METHODOLOGY</div><h2>How to use the portfolio map</h2><p>Use this view to structure a management discussion, not to calculate a winner. Assess each initiative against its relevant business outcome.</p><div className="help-grid"><div><h3>Horizontal · Business Impact</h3><p>A confirmed 1–5 judgment guided by magnitude, reach, and strategic significance. Revenue and productivity can each justify high impact. The categories are ordinal.</p></div><div><h3>Vertical · Time to value</h3><p>Months from investment decision to first meaningful, observable and sustained benefit. Faster appears higher. This differs from pilot duration and payback.</p></div><div><h3>Bubble area · Pilot investment</h3><p>Estimated credible pilot cost in EUR, including internal capacity. Circle area is proportional to cost, subject to a minimum visible size. Rollout and annual costs stay separate.</p></div><div><h3>Color · Residual urgency</h3><p>Low, Moderate, High or Critical after temporary workarounds. Consider severity, deadlines and mandatory committed dependencies. The same labels apply in every scenario.</p></div></div><h3>Scenarios and evidence</h3><p>Conservative, Base, and Optimistic are plausible assumption sets, not probability intervals. Read the assumption notes before interpreting movement. Feasibility blocks and evidence limitations remain visible outside the chart.</p><h3>Archetypes</h3><div className="archetype-help">{archetypes.map(a=><p key={a.name}><b>{a.name}:</b> {a.description} <span>Example: {a.example}.</span></p>)}</div></div></div>:null}
+  </div>
+}
