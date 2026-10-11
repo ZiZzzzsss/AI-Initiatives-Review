@@ -130,3 +130,30 @@
 .timeline-editor-row input{width:100%}
 @media(max-width:900px){.delivery-card-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:600px){.delivery-card-grid,.decision-grid,.timeline-milestones{grid-template-columns:1fr}.timeline-editor-head,.timeline-editor-row{grid-template-columns:minmax(110px,1fr) 78px 78px;gap:5px}.timeline-scale,.timeline-row{grid-template-columns:minmax(105px,38%) 1fr}}
+.economic-model{border:1px solid #d8e7e0;background:#f8fbf9;border-radius:9px;padding:16px;margin:10px 0}
+.economic-model h3{margin:0 0 5px;color:#245b55;font-size:15px}
+.economic-model>p,.economic-preview p,.economic-evidence p{font-size:12px;line-height:1.5;color:#55716b}
+.economic-inputs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 16px;margin:16px 0}
+.economic-input{display:flex;align-items:center;gap:8px}
+.economic-input input{min-width:0;flex:1}
+.economic-input b{min-width:60px;font-size:11px;color:#456b65}
+.economic-preview{background:#edf5f1;border-radius:7px;padding:12px;margin:12px 0}
+.economic-preview h4{margin:0 0 7px;color:#285b55}
+.economic-override{display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin:12px 0}
+.economic-override .field{width:100%}
+.economic-evidence{border-top:1px solid #d8e7e0;padding-top:10px}
+.economic-evidence summary{cursor:pointer;font-weight:700;color:#2a5b54}
+.economic-evidence-row{display:grid;grid-template-columns:minmax(140px,1.4fr) repeat(4,minmax(100px,1fr));gap:7px;margin:9px 0;align-items:center}
+.economic-evidence-row strong{font-size:11px;color:#365f59}
+.economic-evidence-row input,.economic-evidence-row select{min-width:0;width:100%}
+.economic-insights{background:#f6faf7;border-radius:7px;padding:12px}
+.economic-insights details{margin-top:8px}
+.economic-insights summary{cursor:pointer;font-weight:700;color:#285b55}
+.threshold-editor{position:relative;font-size:11px;color:#315e57}
+.threshold-editor summary{cursor:pointer;font-weight:700}
+.threshold-editor[open]{z-index:8;background:#fff;border:1px solid #d8e7e0;box-shadow:0 8px 24px #23433522;padding:10px;border-radius:7px}
+.threshold-editor p{max-width:260px;line-height:1.5}
+.threshold-editor label{display:flex;align-items:center;gap:5px;margin:6px 0}
+.threshold-editor input{width:112px}
+.threshold-editor small{display:block;color:#a34b37}
+@media(max-width:800px){.economic-inputs{grid-template-columns:1fr}.economic-evidence-row{grid-template-columns:1fr 1fr}.economic-evidence-row strong{grid-column:1/-1}.threshold-editor[open]{position:static}}

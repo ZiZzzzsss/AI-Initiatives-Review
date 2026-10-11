@@ -2,6 +2,7 @@ import type { Archetype, CheckState, Initiative, Portfolio, Scenario, ScenarioKe
 import { evidenceLabels, feasibilityLabels } from './metadata'
 import { normalizeClassification } from './classification'
 import { blankDeliveryAssessment, blankDeliveryTimeline } from './delivery'
+import { defaultThresholds, newEconomic } from './economics'
 import type { DeliveryAssessment, DeliveryTimeline, TimelinePhaseKey } from '../types'
 const emptyCosts = () => ({ development:0,integration:0,data:0,software:0,internalTeam:0,testing:0,training:0,evaluation:0,other:0,contingency:0 })
 export const blankScenario = (): Scenario => ({ impact:null,months:null,pilotCost:null,costMode:'simple',costs:emptyCosts(),urgency:null,urgencyRationale:'',impactRationale:'',timeRationale:'',improvement:'',adoption:'',assumptions:'',rolloutCost:null,operatingCost:null,pilotMonths:null,broaderMonths:null,firstValueDate:'',timeline:blankDeliveryTimeline() })
@@ -75,7 +76,27 @@ export function demoPortfolio(): Portfolio {
     base:demoTimeline({discoveryData:[0,3],development:[2,4],integration:[4,3],pilot:[6,3],evaluation:[8,2],adoption:[9,1],rollout:[10,8]},9,10,'The control design starts early and evidence is assessed after a bounded pilot.'),
     optimistic:demoTimeline({discoveryData:[0,2],development:[1,3],integration:[3,3],pilot:[5,2],evaluation:[7,1],adoption:[7,1],rollout:[8,6]},7,8,'Earlier data access and limited-market integration shorten validation.'),
   })
-  return {id:'demo',name:'Illustrative Accor AI portfolio',initiatives:[pitch,crm,pricing]}
+  const economicCases = [
+    {item:pitch,model:'pitch' as const,cases:[
+      {proposals:10000,valuePerProposal:200000,baselineWin:20,winUplift:0.5,reach:35,draftHours:8,timeSaving:20,redeployment:30,demand:100,realizable:10,hourlyCost:65,capture:10},
+      {proposals:10000,valuePerProposal:200000,baselineWin:20,winUplift:1,reach:60,draftHours:8,timeSaving:30,redeployment:50,demand:300,realizable:20,hourlyCost:65,capture:10},
+      {proposals:10000,valuePerProposal:200000,baselineWin:20,winUplift:1.5,reach:80,draftHours:8,timeSaving:35,redeployment:65,demand:500,realizable:20,hourlyCost:65,capture:10},
+    ]},
+    {item:crm,model:'crm' as const,cases:[
+      {opportunityValue:500000000,baselineWin:20,affected:20,winUplift:1,reach:45,capture:20},
+      {opportunityValue:500000000,baselineWin:20,affected:30,winUplift:2,reach:65,capture:20},
+      {opportunityValue:500000000,baselineWin:20,affected:40,winUplift:3,reach:85,capture:20},
+    ]},
+    {item:pricing,model:'pricing' as const,cases:[
+      {eligibleRevenue:1000000000,uplift:0.4,reach:30,capture:30},
+      {eligibleRevenue:1000000000,uplift:0.8,reach:45,capture:30},
+      {eligibleRevenue:1000000000,uplift:1.2,reach:65,capture:30},
+    ]},
+  ]
+  for(const {item,model,cases} of economicCases)(['conservative','base','optimistic'] as const).forEach((key,index)=>{
+    item.scenarios[key].economic=newEconomic(model,{...cases[index],operatingCost:item.scenarios[key].operatingCost??0})
+  })
+  return {id:'demo',name:'Illustrative Accor AI portfolio',initiatives:[pitch,crm,pricing],impactThresholds:defaultThresholds}
 }
 export const cloneInitiative = (i:Initiative):Initiative => ({...structuredClone(i),id:crypto.randomUUID(),name:`${i.name} (copy)`,archived:false})
 export const scenarioFor = (i:Initiative,key:ScenarioKey) => i.scenarios[key]

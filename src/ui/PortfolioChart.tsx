@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
 import { CartesianGrid, ResponsiveContainer, Scatter, ScatterChart, Tooltip, XAxis, YAxis } from 'recharts'
-import type { Initiative, ScenarioKey, Urgency } from '../types'
+import type { ImpactThresholds, Initiative, ScenarioKey, Urgency } from '../types'
 import { bubbleRadius, isComplete, pilotTotal, scenarioNames } from '../lib/assessment'
 import { axisRangeLabel, type AxisBounds, type AxisMode } from '../lib/chartAxes'
 import { placeChartLabels, type LabelLayout } from '../lib/chartLabels'
 import { urgencyColors } from '../lib/metadata'
 import { download } from '../lib/storage'
+import { calculateEconomic, effectiveImpact } from '../lib/economics'
 
 type Point = { id: string; name: string; impact: number; months: number; cost: number; urgency: Urgency; item: Initiative }
 type BubbleProps = { cx?: number; cy?: number; payload?: Point; selectedId: string | null; onSelect: (id: string) => void; maxCost: number; label?: LabelLayout; chartWidth: number; chartHeight: number; labels: boolean }
@@ -40,7 +41,7 @@ function ChartTooltip({ active, payload }: { active?: boolean; payload?: Array<{
   return <div className="chart-tooltip"><strong>{point.name}</strong><span>{point.item.archetype}</span><div className="chart-tooltip-summary">{point.impact}/5 impact · {point.months} mo · {money(point.cost)} · {point.urgency} urgency</div></div>
 }
 
-export default function PortfolioChart({ items, scenario, selectedId, onSelect, bounds, mode, lockAxes, labels, overlay, controls }: { items: Initiative[]; scenario: ScenarioKey; selectedId: string | null; onSelect: (id: string) => void; bounds: AxisBounds; mode: AxisMode; lockAxes: boolean; labels: boolean; overlay: boolean; controls: React.ReactNode }) {
+export default function PortfolioChart({ items, scenario, selectedId, onSelect, bounds, mode, lockAxes, labels, overlay, thresholds, controls }: { items: Initiative[]; scenario: ScenarioKey; selectedId: string | null; onSelect: (id: string) => void; bounds: AxisBounds; mode: AxisMode; lockAxes: boolean; labels: boolean; overlay: boolean; thresholds:ImpactThresholds; controls?: React.ReactNode }) {
   const ref = useRef<HTMLDivElement>(null)
   const [chartWidth, setChartWidth] = useState(760)
   useEffect(() => {
@@ -51,23 +52,26 @@ export default function PortfolioChart({ items, scenario, selectedId, onSelect, 
     return () => observer.disconnect()
   }, [])
   const chartHeight = chartWidth < 520 ? 420 : 450
-  const allPoints: Point[] = items.filter(item => isComplete(item, scenario)).map(item => {
+  const allPoints: Point[] = items.filter(item => isComplete(item, scenario,thresholds)).map(item => {
     const s = item.scenarios[scenario]
-    return { id: item.id, name: item.name, impact: s.impact!, months: s.months!, cost: pilotTotal(s)!, urgency: s.urgency!, item }
+    return { id: item.id, name: item.name, impact: effectiveImpact(item,scenario,thresholds)!, months: s.months!, cost: pilotTotal(s)!, urgency: s.urgency!, item }
   })
   const points = allPoints.filter(point => point.months >= bounds.y[0] && point.months <= bounds.y[1])
-  const costCandidates = lockAxes ? items.flatMap(item => (['conservative', 'base', 'optimistic'] as ScenarioKey[]).filter(key => isComplete(item, key)).map(key => pilotTotal(item.scenarios[key]) || 0)) : points.map(point => point.cost)
+  const costCandidates = lockAxes ? items.flatMap(item => (['conservative', 'base', 'optimistic'] as ScenarioKey[]).filter(key => isComplete(item, key,thresholds)).map(key => pilotTotal(item.scenarios[key]) || 0)) : points.map(point => point.cost)
   const maxCost = Math.max(1, ...costCandidates)
   const costScaleLabel = lockAxes ? 'shared scale max' : 'max shown'
   const layouts = placeChartLabels(points.map(point => ({ id: point.id, name: point.name, archetype: point.item.archetype || '', impact: point.impact, months: point.months, radius: bubbleRadius(point.cost, maxCost) })), bounds, chartWidth, chartHeight)
   const selected = items.find(item => item.id === selectedId)
-  const paths = selected && overlay ? (['conservative', 'base', 'optimistic'] as ScenarioKey[]).filter(key => isComplete(selected, key)).map(key => ({ key, s: selected.scenarios[key] })) : []
+  const paths = selected && overlay ? (['conservative', 'base', 'optimistic'] as ScenarioKey[]).filter(key => isComplete(selected, key,thresholds)).map(key => ({ key, s: selected.scenarios[key] })) : []
   const rangeLabel = axisRangeLabel(bounds)
 
   function exportSvg() {
     const source = ref.current?.querySelector('svg')
     if (!source) return
     const clone = source.cloneNode(true) as SVGSVGElement
+    const description=document.createElementNS('http://www.w3.org/2000/svg','desc')
+    description.textContent=JSON.stringify(points.map(point=>{const result=calculateEconomic(point.item.scenarios[scenario].economic);return {initiative:point.name,effectiveImpact:point.impact,netAnnualContributionEur:result.status==='calculated'?result.net:null,valueCreatedEur:result.status==='calculated'?result.created:null,valueCapturedEur:result.status==='calculated'?result.captured:null}}))
+    clone.prepend(description)
     clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg')
     clone.setAttribute('width', '1030'); clone.setAttribute('height', '535')
     clone.setAttribute('viewBox', `0 0 ${source.clientWidth || chartWidth} ${source.clientHeight || chartHeight}`)
@@ -89,7 +93,7 @@ export default function PortfolioChart({ items, scenario, selectedId, onSelect, 
           <YAxis type="number" dataKey="months" domain={[bounds.y[1], bounds.y[0]]} allowDataOverflow padding={{ top: 42, bottom: 42 }} ticks={bounds.yTicks} tickLine={false} axisLine={{ stroke: '#aebbb8' }} tick={{ fontSize: 12, fill: '#5b6a70' }} width={43} />
           <Tooltip cursor={{ stroke: '#99aaa9', strokeDasharray: '4 3' }} content={<ChartTooltip />} />
           <Scatter data={points} shape={(props: unknown) => { const p = props as { cx: number; cy: number; payload: Point }; return <Bubble {...p} selectedId={selectedId} onSelect={onSelect} maxCost={maxCost} label={layouts[p.payload?.id]} chartWidth={chartWidth} chartHeight={chartHeight} labels={labels} /> }} />
-          {paths.map(({ key, s }) => <Scatter key={key} data={[{ impact: s.impact, months: s.months }]} shape={(props: unknown) => { const p = props as { cx: number; cy: number }; return <g><circle cx={p.cx} cy={p.cy} r="5" fill="#17313b" stroke="white" strokeWidth="2"/><text x={p.cx + 9} y={p.cy - 9} fill="#17313b" fontSize="11">{scenarioNames[key]}</text></g> }} />)}
+          {paths.map(({ key, s }) => <Scatter key={key} data={[{ impact: effectiveImpact(selected!,key,thresholds), months: s.months }]} shape={(props: unknown) => { const p = props as { cx: number; cy: number }; return <g><circle cx={p.cx} cy={p.cy} r="5" fill="#17313b" stroke="white" strokeWidth="2"/><text x={p.cx + 9} y={p.cy - 9} fill="#17313b" fontSize="11">{scenarioNames[key]}</text></g> }} />)}
         </ScatterChart>
       </ResponsiveContainer>
       <div className="chart-x-label">BUSINESS IMPACT · MANAGEMENT RATING →</div>

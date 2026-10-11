@@ -14,7 +14,7 @@ describe('management assessments',()=>{
   it('keeps suggested and confirmed urgency distinct',()=>{const i=blankInitiative();i.urgencyInputs.severity='High';i.urgencyInputs.workaround='Temporary process';i.urgencyInputs.workaroundEffectiveness='High';i.scenarios.base.urgency='Critical';i.scenarios.base.urgencyRationale='Override: committed seasonal deadline';expect(suggestUrgency(i).level).toBe('Moderate');expect(i.scenarios.base.urgency).toBe('Critical');expect(i.scenarios.base.urgencyRationale).toContain('Override')})
   it('suggests a descriptor without changing the confirmed choice',()=>{const i=demoPortfolio().initiatives[2];i.descriptor=null;expect(suggestDescriptor(i)?.name).toBe('High-Impact Opportunity');expect(i.descriptor).toBeNull()})
   it('flags blocked feasibility separately from impact',()=>{const i=demoPortfolio().initiatives[0];i.feasibility['Required data available']='Blocked';expect(readiness(i)).toBe('Blocked');expect(i.scenarios.base.impact).toBe(3)})
-  it('compares trade-offs without selecting a winner',()=>{const p=demoPortfolio();const text=compareSummary([p.initiatives[0],p.initiatives[2]],'base');expect(text).toContain('higher assessed impact');expect(text).toContain('reaches meaningful value sooner');expect(text).toContain('preferred investment depends')})
+  it('compares trade-offs without selecting a winner',()=>{const p=demoPortfolio();const text=compareSummary([p.initiatives[0],p.initiatives[2]],'base');expect(text).toContain('higher effective impact');expect(text).toContain('reaches meaningful value sooner');expect(text).toContain('preferred investment depends')})
 })
 describe('portfolio lifecycle',()=>{
   const memory=new Map<string,string>()
