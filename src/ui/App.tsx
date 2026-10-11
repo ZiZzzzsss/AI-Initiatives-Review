@@ -92,7 +92,7 @@ export default function App(){
             </div>
           </div>
         </div>
-        {filtered.length?<div className="explore-grid"><PortfolioChart items={filtered} scenario={scenario} selectedId={selected?.id||null} onSelect={setSelectedId} bounds={bounds} mode={axisMode} lockAxes={sharedAxes||axisMode==='full'} labels={labels} overlay={overlay}/><InitiativeInsights item={selected} scenario={scenario} onEdit={()=>{if(selected)edit(selected)}}/></div>:<div className="empty-panel filter-empty">No initiatives match these filters. Try another region, function, or archetype.</div>}
+        {filtered.length?<div className="explore-grid"><PortfolioChart items={filtered} scenario={scenario} selectedId={selected?.id||null} onSelect={setSelectedId} bounds={bounds} mode={axisMode} lockAxes={sharedAxes||axisMode==='full'} labels={labels} overlay={overlay}/><InitiativeInsights item={selected} scenario={scenario} peers={portfolio.initiatives} onEdit={()=>{if(selected)edit(selected)}}/></div>:<div className="empty-panel filter-empty">No initiatives match these filters. Try another region, function, or archetype.</div>}
         {filtered.filter(i=>!isComplete(i,scenario)).length?<div className="incomplete-note">{filtered.filter(i=>!isComplete(i,scenario)).length} incomplete assessment(s) are not plotted as zero.</div>:null}
       </>:null}
       {view==='compare'?<Compare items={compared} scenario={scenario}/>:null}{view==='summary'?<Summary items={active} scenario={scenario}/>:null}
