@@ -12,7 +12,7 @@ export default function InitiativeInsights({ item, scenario, peers, onEdit }: { 
   const s = item.scenarios[scenario]
   const d=item.deliveryAssessment
   return <aside className="insights-panel" aria-label="Selected initiative insights">
-    <div className="eyebrow">SELECTED INITIATIVE · {scenarioNames[scenario].toUpperCase()}</div>
+    <div className="insights-header"><div className="eyebrow">SELECTED INITIATIVE · {scenarioNames[scenario].toUpperCase()}</div><button className="insights-edit" onClick={onEdit}>Edit assessment ↗</button></div>
     <h2>{item.name}</h2>
     <div className="insights-archetype">{item.archetype || 'Archetype not selected'}</div>
     <div className="insights-status">{readiness(item)}</div>
@@ -38,6 +38,5 @@ export default function InitiativeInsights({ item, scenario, peers, onEdit }: { 
     {!s.impactAssessment?<div className="insights-copy"><h3>Principal assumptions</h3><p className="insights-preview">{s.assumptions || 'Scenario assumptions not documented.'}</p></div>:null}
     <div className="insights-copy"><h3>Management interpretation</h3><p className="insights-preview">{managementInterpretation(item, scenario)}</p></div>
     <details className="insights-more"><summary>Full context</summary><div><p><b>Principal assumptions:</b> {s.assumptions || 'Scenario assumptions not documented.'}</p><p><b>Key uncertainty:</b> {item.validationAssumptions || 'Not documented.'}</p><p><b>Management interpretation:</b> {managementInterpretation(item, scenario)}</p></div></details>
-    <button className="insights-edit" onClick={onEdit}>Edit assessment ↗</button>
   </aside>
 }
