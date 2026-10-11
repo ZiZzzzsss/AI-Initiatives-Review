@@ -3,9 +3,10 @@ import { evidenceLabels, feasibilityLabels } from './metadata'
 import { normalizeClassification } from './classification'
 import { blankDeliveryAssessment, blankDeliveryTimeline } from './delivery'
 import { newImpactAssessment } from './impactGuide'
+import { blankEconomicValidation } from './economicValidation'
 import type { DeliveryAssessment, DeliveryTimeline, TimelinePhaseKey } from '../types'
 const emptyCosts = () => ({ development:0,integration:0,data:0,software:0,internalTeam:0,testing:0,training:0,evaluation:0,other:0,contingency:0 })
-export const blankScenario = (): Scenario => ({ impact:null,months:null,pilotCost:null,costMode:'simple',costs:emptyCosts(),urgency:null,urgencyRationale:'',impactRationale:'',timeRationale:'',improvement:'',adoption:'',assumptions:'',rolloutCost:null,operatingCost:null,pilotMonths:null,broaderMonths:null,firstValueDate:'',timeline:blankDeliveryTimeline() })
+export const blankScenario = (): Scenario => ({ impact:null,months:null,pilotCost:null,costMode:'simple',costs:emptyCosts(),urgency:null,urgencyRationale:'',impactRationale:'',timeRationale:'',improvement:'',adoption:'',assumptions:'',rolloutCost:null,operatingCost:null,pilotMonths:null,broaderMonths:null,firstValueDate:'',timeline:blankDeliveryTimeline(),economicValidation:blankEconomicValidation() })
 export const blankInitiative = (): Initiative => ({
   id: crypto.randomUUID(),name:'',region:'',subregion:'',coveredRegions:[],businessUnit:'',function:'',archived:false,archetype:null,secondary:[],descriptor:null,descriptorRationale:'',impactType:'Productivity',problem:'',baselineKpi:'',improvementDescription:'',quantitativeEstimate:'',evidenceSource:'Unknown',evidenceNote:'',reach:'',eligiblePopulation:'',scope:'Team',activityScope:'',strategicObjective:'',workflowImportance:'',consequence:'',meaningfulKpi:'',meaningfulThreshold:'',
   phases:{discovery:null,pilot:null,evaluation:null,rollout:null,adoption:null},
@@ -96,6 +97,19 @@ export function demoPortfolio(): Portfolio {
   for(const {item,guide,cases,context} of impactCases)(['conservative','base','optimistic'] as const).forEach((key,index)=>{
     item.scenarios[key].impactAssessment=newImpactAssessment(guide,cases[index],context,'Expert judgment')
   })
+  const validationCases = [
+    {item:pitch,rating:2,rationale:'Illustrative: drafting time and quality can be measured, but economic conversion of released capacity needs additional proof.',hypothesis:'AI-assisted proposal generation releases usable sales capacity without reducing proposal quality.',mechanism:'Released capacity serves qualified demand or creates realizable savings.',kpi:'Net proposal drafting and review time, with quality acceptance.',design:'Compare similar proposals and sales teams against the current workflow.',uncertainty:'Whether net time savings become profitable work or realizable savings.',limits:'Additional sales or cash savings need longer observation and a credible comparison.'},
+    {item:crm,rating:3,rationale:'Illustrative: record quality and sales activity can be measured, while downstream commercial attribution remains uncertain.',hypothesis:'Improved CRM data quality increases sales productivity or commercial effectiveness.',mechanism:'Better account information reduces rework and improves relevant sales decisions.',kpi:'Record accuracy, correction time and qualified commercial activity.',design:'Pilot a defined account segment with baseline and matched comparison.',uncertainty:'Whether better data materially improves sales outcomes.',limits:'Downstream sales effects and hypothetical dependencies need separate validation.'},
+    {item:pricing,rating:3,rationale:'Illustrative first AI pilot: financial outcomes can be measured, but a credible control and attribution plan are still required.',hypothesis:'AI pricing recommendations generate sufficient incremental contribution to justify wider implementation.',mechanism:'Incremental pricing gains above the current non-AI process create captured contribution.',kpi:'Incremental RevPAR or contribution margin versus current practice.',design:'Compare a bounded hotel cohort with credible control properties or a phased rollout.',uncertainty:'Whether the new AI approach outperforms current pricing after market effects.',limits:'Access, hotel comparability, seasonality and rollout cost assumptions remain unverified.'},
+  ]
+  for(const c of validationCases)for(const key of ['conservative','base','optimistic'] as const){
+    c.item.scenarios[key].economicValidation={...blankEconomicValidation(),rating:c.rating,rationale:c.rationale,
+      economicBenefit:c.mechanism,businessKpi:c.kpi,financialTranslation:c.mechanism,minimumImprovement:'Set a threshold with Finance before the pilot.',
+      baseline:'Establish current-process baseline before testing.',evaluationDesign:c.design,externalFactors:'Adoption, market conditions and workflow differences.',
+      incrementalValue:c.mechanism,scaleCosts:'Estimate implementation and ongoing operating costs before scale.',remainingFinancialUncertainty:c.uncertainty,
+      representativePopulation:'Use a defined pilot cohort and test its representativeness.',extrapolationLimits:'Regional and workflow differences may limit extrapolation.',decisionUse:'Use the findings for a scale, improve or stop decision.',
+      criticalHypothesis:c.hypothesis,valueMechanism:c.mechanism,measurableOutcome:c.kpi,pilotMethod:c.design,decisionThreshold:'Define the minimum acceptable result before launch.',mainUncertainty:c.uncertainty,evidenceLimitations:c.limits}
+  }
   return {id:'demo',name:'Illustrative Accor AI portfolio',initiatives:[pitch,crm,pricing]}
 }
 export const cloneInitiative = (i:Initiative):Initiative => ({...structuredClone(i),id:crypto.randomUUID(),name:`${i.name} (copy)`,archived:false})

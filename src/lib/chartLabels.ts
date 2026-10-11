@@ -1,16 +1,27 @@
 import type { AxisBounds } from './chartAxes'
 
-export type LabelPoint = { id: string; name: string; subtitle: string; impact: number; months: number; radius: number }
+export type LabelPoint = { id: string; name: string; subtitle: string; impact: number; validation: number; radius: number; offsetX?: number }
 export type LabelLayout = { side: 'left' | 'right'; dy: number; displayName: string }
 type Rect = { left: number; right: number; top: number; bottom: number }
 const overlap = (a: Rect, b: Rect) => Math.max(0, Math.min(a.right, b.right) - Math.max(a.left, b.left)) * Math.max(0, Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top))
 export const compactName = (name: string) => name === 'Automated CRM Data Enrichment' ? 'CRM Data Enrichment' : name.length > 29 ? `${name.slice(0, 27).trimEnd()}…` : name
 
+export function coincidentOffsets(points:{id:string;impact:number;validation:number;radius:number}[]):Record<string,number> {
+  const groups=new Map<string,typeof points>()
+  for(const point of points){const key=`${point.impact}:${point.validation}`;groups.set(key,[...(groups.get(key)||[]),point])}
+  const offsets:Record<string,number>={}
+  for(const group of groups.values()){
+    const step=Math.max(...group.map(point=>point.radius))*2+8
+    group.forEach((point,index)=>{offsets[point.id]=(index-(group.length-1)/2)*step})
+  }
+  return offsets
+}
+
 export function placeChartLabels(points: LabelPoint[], bounds: AxisBounds, width: number, height: number): Record<string, LabelLayout> {
   const left = 90, right = width - 84, top = 73, bottom = height - 76
   const projected = points.map(point => ({ ...point,
-    x: left + (point.impact - bounds.x[0]) / Math.max(0.1, bounds.x[1] - bounds.x[0]) * Math.max(1, right - left),
-    y: top + (point.months - bounds.y[0]) / Math.max(0.1, bounds.y[1] - bounds.y[0]) * Math.max(1, bottom - top),
+    x: left + (point.impact - bounds.x[0]) / Math.max(0.1, bounds.x[1] - bounds.x[0]) * Math.max(1, right - left) + (point.offsetX||0),
+    y: bottom - (point.validation - bounds.y[0]) / Math.max(0.1, bounds.y[1] - bounds.y[0]) * Math.max(1, bottom - top),
   }))
   const placed: Rect[] = []
   const result: Record<string, LabelLayout> = {}

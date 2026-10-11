@@ -1,6 +1,7 @@
 import type { CheckState, Descriptor, Initiative, Scenario, ScenarioKey, Urgency } from '../types'
 import { feasibilityLabels } from './metadata'
 import { effectiveImpact, missingEvidence, suggestImpact } from './impactGuide'
+import { validationRating } from './economicValidation'
 export const scenarioNames: Record<ScenarioKey, string> = { conservative: 'Conservative', base: 'Base', optimistic: 'Optimistic' }
 export const scenarioKeys: ScenarioKey[] = ['conservative','base','optimistic']
 export const validImpact = (n: number | null) => n !== null && Number.isInteger(n) && n >= 1 && n <= 5
@@ -8,6 +9,7 @@ export const validMonths = (n: number | null) => n !== null && Number.isFinite(n
 export const validCost = (n: number | null) => n !== null && Number.isFinite(n) && n >= 0
 export const pilotTotal = (s: Scenario) => s.costMode === 'advanced' ? Object.values(s.costs).reduce((a,b) => a + (Number.isFinite(b) && b >= 0 ? b : 0), 0) : s.pilotCost
 export const isComplete = (i: Initiative, key: ScenarioKey) => Boolean(i.name.trim() && i.archetype && validImpact(effectiveImpact(i,key)) && validMonths(i.scenarios[key].months) && validCost(pilotTotal(i.scenarios[key])) && i.scenarios[key].urgency)
+export const isChartable = (i: Initiative, key: ScenarioKey) => Boolean(i.name.trim() && validImpact(effectiveImpact(i,key)) && validationRating(i,key)!==null && validCost(pilotTotal(i.scenarios[key])))
 export const fundingGateLabel = 'Funding or budget approved'
 export const pilotGateLabels = feasibilityLabels.filter(label => label !== fundingGateLabel)
 export const pilotGateState = (i: Initiative, label: string): CheckState => i.feasibility[label] || 'Unconfirmed'

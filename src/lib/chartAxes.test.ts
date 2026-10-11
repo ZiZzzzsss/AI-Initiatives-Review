@@ -1,52 +1,44 @@
 import { describe, expect, it } from 'vitest'
 import { chartAxisBounds } from './chartAxes'
-import { compactName, placeChartLabels } from './chartLabels'
+import { coincidentOffsets, compactName, placeChartLabels } from './chartLabels'
 import { demoPortfolio } from './data'
 
-describe('chart display ranges', () => {
-  it('fits the visible scenario with rating padding and rounded months', () => {
-    const items = demoPortfolio().initiatives
-    const bounds = chartAxisBounds(items, 'base', 'fit', false, [0, 18])
-    expect(bounds.x).toEqual([2.6, 4.4])
-    expect(bounds.y[1]).toBeLessThan(18)
-    expect(bounds.y[0]).toBeLessThan(3)
-    expect(bounds.y[1]).toBeGreaterThan(10)
-    expect(bounds.xTicks).toEqual([3, 4])
-    expect(bounds.yTicks).toEqual([...bounds.yTicks].sort((a, b) => a - b))
+describe('economic validation chart ranges', () => {
+  it('fits both 1–5 rating axes around the visible scenario', () => {
+    const bounds=chartAxisBounds(demoPortfolio().initiatives,'base','fit',false)
+    expect(bounds.x).toEqual([2.6,4.4])
+    expect(bounds.y).toEqual([1.6,3.4])
+    expect(bounds.xTicks).toEqual([3,4])
+    expect(bounds.yTicks).toEqual([2,3])
   })
-  it('keeps a common fitted range across scenario switches when locked', () => {
-    const items = demoPortfolio().initiatives
-    const base = chartAxisBounds(items, 'base', 'fit', true, [0, 18])
-    const downside = chartAxisBounds(items, 'conservative', 'fit', true, [0, 18])
-    const upside = chartAxisBounds(items, 'optimistic', 'fit', true, [0, 18])
-    expect(downside).toEqual(base)
-    expect(upside).toEqual(base)
-    expect(chartAxisBounds(items, 'optimistic', 'fit', false, [0, 18]).y).not.toEqual(base.y)
+  it('locks rating axes across scenarios and supports full 1–5 scale', () => {
+    const items=demoPortfolio().initiatives
+    expect(chartAxisBounds(items,'base','fit',true)).toEqual(chartAxisBounds(items,'optimistic','fit',true))
+    expect(chartAxisBounds(items,'base','full',false).y).toEqual([1,5])
   })
-  it('uses the full 1–5 rating scale and configured month range in Full Scale', () => {
-    const bounds = chartAxisBounds(demoPortfolio().initiatives, 'base', 'full', false, [0, 24])
-    expect(bounds.x).toEqual([1, 5])
-    expect(bounds.y).toEqual([0, 24])
+  it('moves higher validation ratings upward without changing impact', () => {
+    const items=demoPortfolio().initiatives
+    items[0].scenarios.base.economicValidation!.rating=5
+    const bounds=chartAxisBounds(items,'base','fit',false)
+    expect(bounds.y[1]).toBeGreaterThan(4)
+    expect(bounds.x).toEqual([2.6,4.4])
   })
-  it('gives identical values visible padded ranges without modifying assessments', () => {
-    const items = demoPortfolio().initiatives
-    const original = items[0].scenarios.base
-    for (const item of items) { item.scenarios.base.impact = 3; item.scenarios.base.months = 6 }
-    const bounds = chartAxisBounds(items, 'base', 'fit', false, [0, 18])
-    expect(bounds.x[0]).toBeLessThan(3)
-    expect(bounds.x[1]).toBeGreaterThan(3)
-    expect(bounds.y[0]).toBeLessThan(6)
-    expect(bounds.y[1]).toBeGreaterThan(6)
-    expect(original.pilotCost).toBe(35000)
-  })
-  it('retains readable compact names and chooses separate label placements', () => {
-    const bounds = chartAxisBounds(demoPortfolio().initiatives, 'base', 'fit', false, [0, 18])
-    const labels = placeChartLabels([
-      {id:'a',name:'Automated CRM Data Enrichment',subtitle:'Intermediate investment and timeline',impact:4,months:6,radius:23},
-      {id:'b',name:'Predictive Pricing',subtitle:'Higher impact, larger commitment',impact:5,months:10,radius:34},
-    ], bounds, 700, 490)
+  it('retains compact names and places labels with takeaway width', () => {
+    const bounds=chartAxisBounds(demoPortfolio().initiatives,'base','fit',false)
+    const labels=placeChartLabels([
+      {id:'a',name:'Automated CRM Data Enrichment',subtitle:'Intermediate cost and evidence',impact:3,validation:3,radius:23},
+      {id:'b',name:'Predictive Pricing',subtitle:'High impact, larger commitment',impact:4,validation:3,radius:34},
+    ],bounds,700,490)
     expect(compactName('Automated CRM Data Enrichment')).toBe('CRM Data Enrichment')
     expect(labels.a.displayName).toBe('CRM Data Enrichment')
-    expect(labels.b.side).toBe('left')
+    expect(labels.b.displayName).toBe('Predictive Pricing')
+  })
+  it('separates coincident bubbles while retaining their assessed coordinates',()=>{
+    const points=[{id:'crm',impact:4,validation:3,radius:22},{id:'pricing',impact:4,validation:3,radius:34}]
+    const offsets=coincidentOffsets(points)
+    expect(offsets.crm).toBeLessThan(0)
+    expect(offsets.pricing).toBeGreaterThan(0)
+    expect(offsets.pricing-offsets.crm).toBeGreaterThan(56)
+    expect(points.every(point=>point.impact===4&&point.validation===3)).toBe(true)
   })
 })

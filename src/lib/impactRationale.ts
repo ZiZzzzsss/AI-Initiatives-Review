@@ -140,12 +140,12 @@ export function impactWhy(assessment: ImpactAssessment): string {
 
 export function impactDecision(item: Initiative, scenario: ScenarioKey, alternativeScore: number | null, peers: Initiative[] = [], changed = true): string {
   const assessment = item.scenarios[scenario].impactAssessment
-  if (!assessment) return 'Discuss the impact assessment alongside time to value, pilot investment, urgency and feasibility.'
+  if (!assessment) return 'Discuss impact alongside economic validation, evidence timing, pilot investment and feasibility.'
   const current = suggestImpact(assessment).score
   const guide = rationaleGuides[assessment.guide]
   const comparison = peers.filter(x => x.id !== item.id && !x.archived).slice(0, 3).map(x => x.name).join(' and ')
   const compare = comparison ? ` Compare with ${comparison}` : ' Compare with other opportunities'
-  const dimensions = ' using time to value, pilot investment, urgency and feasibility; this preview does not decide the pilot.'
+  const dimensions = ' using economic validation, evidence timing, pilot investment and feasibility; this preview does not decide the pilot.'
   if (current === null || alternativeScore === null) return `Complete the assumptions before drawing a priority implication.${compare}${dimensions}`
   if (!changed) return `This preview leaves the assumption and suggested rating unchanged.${compare}${dimensions}`
   if (alternativeScore < current) return `${guide.downside}${compare}${dimensions}`
