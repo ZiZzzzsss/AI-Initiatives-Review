@@ -1,6 +1,6 @@
 import type { AxisBounds } from './chartAxes'
 
-export type LabelPoint = { id: string; name: string; archetype: string; impact: number; months: number; radius: number }
+export type LabelPoint = { id: string; name: string; subtitle: string; impact: number; months: number; radius: number }
 export type LabelLayout = { side: 'left' | 'right'; dy: number; displayName: string }
 type Rect = { left: number; right: number; top: number; bottom: number }
 const overlap = (a: Rect, b: Rect) => Math.max(0, Math.min(a.right, b.right) - Math.max(a.left, b.left)) * Math.max(0, Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top))
@@ -16,7 +16,7 @@ export function placeChartLabels(points: LabelPoint[], bounds: AxisBounds, width
   const result: Record<string, LabelLayout> = {}
   for (const point of projected) {
     const displayName = compactName(point.name)
-    const labelWidth = Math.min(200, Math.max(displayName.length * 6.5, point.archetype.length * 5.4))
+    const labelWidth = Math.min(220, Math.max(displayName.length * 6.5, point.subtitle.length * 4.8))
     const preferred: ('left' | 'right')[] = point.x > width * 0.58 ? ['left', 'right'] : ['right', 'left']
     let best: { side: 'left' | 'right'; dy: number; score: number; box: Rect } | undefined
     for (const dy of [-3, -35, 29, -66, 60]) for (const side of preferred) {

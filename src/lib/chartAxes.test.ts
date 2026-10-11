@@ -42,8 +42,8 @@ describe('chart display ranges', () => {
   it('retains readable compact names and chooses separate label placements', () => {
     const bounds = chartAxisBounds(demoPortfolio().initiatives, 'base', 'fit', false, [0, 18])
     const labels = placeChartLabels([
-      {id:'a',name:'Automated CRM Data Enrichment',archetype:'Strategic Enabler',impact:4,months:6,radius:23},
-      {id:'b',name:'Predictive Pricing',archetype:'Revenue & Margin Optimizer',impact:5,months:10,radius:34},
+      {id:'a',name:'Automated CRM Data Enrichment',subtitle:'Intermediate investment and timeline',impact:4,months:6,radius:23},
+      {id:'b',name:'Predictive Pricing',subtitle:'Higher impact, larger commitment',impact:5,months:10,radius:34},
     ], bounds, 700, 490)
     expect(compactName('Automated CRM Data Enrichment')).toBe('CRM Data Enrichment')
     expect(labels.a.displayName).toBe('CRM Data Enrichment')

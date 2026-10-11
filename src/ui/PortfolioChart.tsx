@@ -1,21 +1,22 @@
 import { useEffect, useRef, useState } from 'react'
 import { CartesianGrid, ResponsiveContainer, Scatter, ScatterChart, Tooltip, XAxis, YAxis } from 'recharts'
 import type { Initiative, ScenarioKey, Urgency } from '../types'
-import { bubbleRadius, isComplete, pilotTotal, scenarioNames } from '../lib/assessment'
+import { bubbleRadius, isComplete, pilotHardGateStatus, pilotTotal, scenarioNames } from '../lib/assessment'
 import { axisRangeLabel, type AxisBounds, type AxisMode } from '../lib/chartAxes'
 import { placeChartLabels, type LabelLayout } from '../lib/chartLabels'
+import { chartTakeaways, type ChartTakeaway, type DecisionPoint } from '../lib/chartTakeaways'
 import { urgencyColors } from '../lib/metadata'
 import { download } from '../lib/storage'
 import { effectiveImpact, selectedAssumptions, suggestImpact } from '../lib/impactGuide'
 
-type Point = { id: string; name: string; impact: number; months: number; cost: number; urgency: Urgency; item: Initiative }
-type BubbleProps = { cx?: number; cy?: number; payload?: Point; selectedId: string | null; onSelect: (id: string) => void; maxCost: number; label?: LabelLayout; chartWidth: number; chartHeight: number; labels: boolean }
+type Point = DecisionPoint & { name: string; urgency: Urgency; item: Initiative }
+type BubbleProps = { cx?: number; cy?: number; payload?: Point; selectedId: string | null; onSelect: (id: string) => void; onFocus: (id: string | null) => void; maxCost: number; label?: LabelLayout; decision: ChartTakeaway; chartWidth: number; chartHeight: number; labels: boolean }
 const money = (n: number) => new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(n)
 
-function Bubble({ cx = 0, cy = 0, payload, selectedId, onSelect, maxCost, label, chartWidth, chartHeight, labels }: BubbleProps) {
+function Bubble({ cx = 0, cy = 0, payload, selectedId, onSelect, onFocus, maxCost, label, decision, chartWidth, chartHeight, labels }: BubbleProps) {
   if (!payload) return null
   const r = bubbleRadius(payload.cost, maxCost)
-  const labelWidth = Math.min(200, Math.max((label?.displayName.length || 0) * 6.5, (payload.item.archetype?.length || 0) * 5.4))
+  const labelWidth = Math.min(220, Math.max((label?.displayName.length || 0) * 6.5, decision.subtitle.length * 4.8))
   const compact = chartWidth < 500
   let side = label?.side || (cx > chartWidth * 0.58 ? 'left' : 'right')
   if (side === 'right' && cx + r + 10 + labelWidth > chartWidth - 8) side = 'left'
@@ -24,26 +25,32 @@ function Bubble({ cx = 0, cy = 0, payload, selectedId, onSelect, maxCost, label,
   const compactY = cy < chartHeight * 0.38 || cy + r + 30 > chartHeight - 48 ? cy - r - 17 : cy + r + 16
   const labelY = compact ? Math.max(55, Math.min(chartHeight - 58, compactY)) : Math.max(55, Math.min(chartHeight - 58, cy + (label?.dy || -3)))
   const moved = Math.abs(labelY - cy) > 22
-  return <g className="chart-bubble" onClick={() => onSelect(payload.id)} role="button" tabIndex={0} onKeyDown={event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); onSelect(payload.id) } }} aria-label={`Select ${payload.name}, ${payload.item.archetype}, ${payload.urgency} urgency`}>
+  return <g className="chart-bubble" onClick={() => onSelect(payload.id)} onFocus={() => onFocus(payload.id)} onBlur={() => onFocus(null)} role="button" tabIndex={0} onKeyDown={event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); onSelect(payload.id) } }} aria-label={`Select ${payload.name}. ${decision.takeaway} ${decision.tradeOff} Business Impact ${payload.impact}/5, time to value ${payload.months} months, pilot investment ${money(payload.cost)}, pilot hard gates ${payload.gates}.`}>
     {selectedId === payload.id ? <circle cx={cx} cy={cy} r={r + 5} fill="none" stroke="#233746" strokeWidth="2" /> : null}
     <circle cx={cx} cy={cy} r={r} fill={urgencyColors[payload.urgency]} fillOpacity="0.88" stroke="white" strokeWidth="2" />
     {labels && moved ? <line x1={compact ? cx : cx + (side === 'right' ? r : -r)} y1={compact ? cy + (labelY > cy ? r : -r) : cy} x2={labelX} y2={labelY + 3} stroke="#a9b9b4" strokeWidth="1" pointerEvents="none" /> : null}
     {labels ? <text x={labelX} y={labelY} textAnchor={compact ? 'middle' : side === 'right' ? 'start' : 'end'} pointerEvents="none" className="bubble-label">
       <tspan x={labelX} fontSize="11" fontWeight="800" fill="#24464d">{label?.displayName || payload.name}</tspan>
-      <tspan x={labelX} dy="14" fontSize="9" fill="#738c88">{payload.item.archetype}</tspan>
+      <tspan x={labelX} dy="14" fontSize="9" fill="#738c88">{decision.subtitle}</tspan>
     </text> : null}
   </g>
 }
 
-function ChartTooltip({ active, payload }: { active?: boolean; payload?: Array<{ payload: Point }> }) {
+function TooltipBody({ point, decision }: { point: Point; decision: ChartTakeaway }) {
+  return <div className="chart-tooltip"><strong>{point.name}</strong><span><b>Key takeaway</b> {decision.takeaway}</span><span><b>Trade-off</b> {decision.tradeOff}</span><div className="chart-tooltip-summary"><b>Key metrics</b><span>Impact {point.impact}/5 · Time to value {point.months} mo</span><span>Pilot {money(point.cost)} · Gates {point.gates}</span>{point.evidenceReady !== null ? <span>Decision-ready evidence: month {point.evidenceReady}</span> : null}</div></div>
+}
+
+function ChartTooltip({ active, payload, takeaways }: { active?: boolean; payload?: Array<{ payload: Point }>; takeaways: Record<string, ChartTakeaway> }) {
   if (!active || !payload?.length) return null
   const point = payload[0].payload
-  return <div className="chart-tooltip"><strong>{point.name}</strong><span>{point.item.archetype}</span><div className="chart-tooltip-summary">{point.impact}/5 impact · {point.months} mo · {money(point.cost)} · {point.urgency} urgency</div></div>
+  const decision = takeaways[point.id]
+  return decision ? <TooltipBody point={point} decision={decision}/> : null
 }
 
 export default function PortfolioChart({ items, scenario, selectedId, onSelect, bounds, mode, lockAxes, labels, overlay, controls }: { items: Initiative[]; scenario: ScenarioKey; selectedId: string | null; onSelect: (id: string) => void; bounds: AxisBounds; mode: AxisMode; lockAxes: boolean; labels: boolean; overlay: boolean; controls?: React.ReactNode }) {
   const ref = useRef<HTMLDivElement>(null)
   const [chartWidth, setChartWidth] = useState(760)
+  const [focusedId, setFocusedId] = useState<string | null>(null)
   useEffect(() => {
     const element = ref.current
     if (!element) return
@@ -54,13 +61,15 @@ export default function PortfolioChart({ items, scenario, selectedId, onSelect, 
   const chartHeight = chartWidth < 520 ? 420 : 450
   const allPoints: Point[] = items.filter(item => isComplete(item, scenario)).map(item => {
     const s = item.scenarios[scenario]
-    return { id: item.id, name: item.name, impact: effectiveImpact(item,scenario)!, months: s.months!, cost: pilotTotal(s)!, urgency: s.urgency!, item }
+    return { id: item.id, name: item.name, impact: effectiveImpact(item,scenario)!, months: s.months!, cost: pilotTotal(s)!, evidenceReady: s.timeline.evidenceReady, gates: pilotHardGateStatus(item), uncertainty: s.impactAssessment?.uncertainty || item.validationAssumptions, urgency: s.urgency!, item }
   })
   const points = allPoints.filter(point => point.months >= bounds.y[0] && point.months <= bounds.y[1])
+  const takeaways = chartTakeaways(points)
+  const focusedPoint = points.find(point => point.id === focusedId)
   const costCandidates = lockAxes ? items.flatMap(item => (['conservative', 'base', 'optimistic'] as ScenarioKey[]).filter(key => isComplete(item, key)).map(key => pilotTotal(item.scenarios[key]) || 0)) : points.map(point => point.cost)
   const maxCost = Math.max(1, ...costCandidates)
   const costScaleLabel = lockAxes ? 'shared scale max' : 'max shown'
-  const layouts = placeChartLabels(points.map(point => ({ id: point.id, name: point.name, archetype: point.item.archetype || '', impact: point.impact, months: point.months, radius: bubbleRadius(point.cost, maxCost) })), bounds, chartWidth, chartHeight)
+  const layouts = placeChartLabels(points.map(point => ({ id: point.id, name: point.name, subtitle: takeaways[point.id].subtitle, impact: point.impact, months: point.months, radius: bubbleRadius(point.cost, maxCost) })), bounds, chartWidth, chartHeight)
   const selected = items.find(item => item.id === selectedId)
   const paths = selected && overlay ? (['conservative', 'base', 'optimistic'] as ScenarioKey[]).filter(key => isComplete(selected, key)).map(key => ({ key, s: selected.scenarios[key] })) : []
   const rangeLabel = axisRangeLabel(bounds)
@@ -91,11 +100,12 @@ export default function PortfolioChart({ items, scenario, selectedId, onSelect, 
           <CartesianGrid stroke="#e6ebe9" strokeDasharray="3 4" />
           <XAxis type="number" dataKey="impact" domain={bounds.x} allowDataOverflow padding={{ left: 60, right: 60 }} ticks={bounds.xTicks} tickLine={false} axisLine={{ stroke: '#aebbb8' }} tick={{ fontSize: 12, fill: '#5b6a70' }} />
           <YAxis type="number" dataKey="months" domain={[bounds.y[1], bounds.y[0]]} allowDataOverflow padding={{ top: 42, bottom: 42 }} ticks={bounds.yTicks} tickLine={false} axisLine={{ stroke: '#aebbb8' }} tick={{ fontSize: 12, fill: '#5b6a70' }} width={43} />
-          <Tooltip cursor={{ stroke: '#99aaa9', strokeDasharray: '4 3' }} content={<ChartTooltip />} />
-          <Scatter data={points} shape={(props: unknown) => { const p = props as { cx: number; cy: number; payload: Point }; return <Bubble {...p} selectedId={selectedId} onSelect={onSelect} maxCost={maxCost} label={layouts[p.payload?.id]} chartWidth={chartWidth} chartHeight={chartHeight} labels={labels} /> }} />
+          <Tooltip cursor={{ stroke: '#99aaa9', strokeDasharray: '4 3' }} allowEscapeViewBox={{ x: true, y: true }} content={<ChartTooltip takeaways={takeaways} />} />
+          <Scatter data={points} shape={(props: unknown) => { const p = props as { cx: number; cy: number; payload: Point }; return <Bubble {...p} selectedId={selectedId} onSelect={onSelect} onFocus={setFocusedId} maxCost={maxCost} label={layouts[p.payload?.id]} decision={takeaways[p.payload?.id]} chartWidth={chartWidth} chartHeight={chartHeight} labels={labels} /> }} />
           {paths.map(({ key, s }) => <Scatter key={key} data={[{ impact: effectiveImpact(selected!,key), months: s.months }]} shape={(props: unknown) => { const p = props as { cx: number; cy: number }; return <g><circle cx={p.cx} cy={p.cy} r="5" fill="#17313b" stroke="white" strokeWidth="2"/><text x={p.cx + 9} y={p.cy - 9} fill="#17313b" fontSize="11">{scenarioNames[key]}</text></g> }} />)}
         </ScatterChart>
       </ResponsiveContainer>
+      {focusedPoint ? <div className="chart-focus-tooltip"><TooltipBody point={focusedPoint} decision={takeaways[focusedPoint.id]}/></div> : null}
       <div className="chart-x-label">BUSINESS IMPACT · EFFECTIVE RATING →</div>
       {!points.length ? <div className="chart-empty">No complete initiatives fit this display range. Complete an assessment or expand the full-scale month range.</div> : null}
     </div>
