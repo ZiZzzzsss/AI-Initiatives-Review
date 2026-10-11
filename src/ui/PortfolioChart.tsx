@@ -96,7 +96,7 @@ export default function PortfolioChart({ items, scenario, selectedId, onSelect, 
           {paths.map(({ key, s }) => <Scatter key={key} data={[{ impact: effectiveImpact(selected!,key,thresholds), months: s.months }]} shape={(props: unknown) => { const p = props as { cx: number; cy: number }; return <g><circle cx={p.cx} cy={p.cy} r="5" fill="#17313b" stroke="white" strokeWidth="2"/><text x={p.cx + 9} y={p.cy - 9} fill="#17313b" fontSize="11">{scenarioNames[key]}</text></g> }} />)}
         </ScatterChart>
       </ResponsiveContainer>
-      <div className="chart-x-label">BUSINESS IMPACT · MANAGEMENT RATING →</div>
+      <div className="chart-x-label">BUSINESS IMPACT · EFFECTIVE RATING →</div>
       {!points.length ? <div className="chart-empty">No complete initiatives fit this display range. Complete an assessment or expand the full-scale month range.</div> : null}
     </div>
     <div className="chart-footer"><div className="urgency-legend"><b>Residual urgency</b>{(['Low', 'Moderate', 'High', 'Critical'] as Urgency[]).map(urgency => <span key={urgency}><i style={{ background: urgencyColors[urgency] }}/>{urgency}</span>)}</div><div className="size-legend"><span>Bubble area = pilot cost</span><i className="size-small"/><i className="size-large"/><span>{money(maxCost)} {costScaleLabel}</span></div></div>
