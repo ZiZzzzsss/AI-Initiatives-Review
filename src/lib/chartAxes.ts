@@ -1,5 +1,6 @@
 import type { Initiative, ScenarioKey } from '../types'
 import { isComplete, scenarioKeys } from './assessment'
+import { effectiveImpact } from './impactGuide'
 
 export type AxisMode = 'fit' | 'full'
 export type AxisBounds = {
@@ -22,7 +23,7 @@ export function chartAxisBounds(
 ): AxisBounds {
   const keys = mode === 'fit' && lockAcrossScenarios ? scenarioKeys : [scenario]
   const values = items.flatMap(item => keys.filter(key => isComplete(item, key)).map(key => ({
-    impact: item.scenarios[key].impact as number,
+    impact: effectiveImpact(item,key) as number,
     months: item.scenarios[key].months as number,
   })))
   if (mode === 'full' || values.length === 0) {

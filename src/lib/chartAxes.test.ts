@@ -7,11 +7,11 @@ describe('chart display ranges', () => {
   it('fits the visible scenario with rating padding and rounded months', () => {
     const items = demoPortfolio().initiatives
     const bounds = chartAxisBounds(items, 'base', 'fit', false, [0, 18])
-    expect(bounds.x).toEqual([2.6, 5])
+    expect(bounds.x).toEqual([2.6, 4.4])
     expect(bounds.y[1]).toBeLessThan(18)
     expect(bounds.y[0]).toBeLessThan(3)
     expect(bounds.y[1]).toBeGreaterThan(10)
-    expect(bounds.xTicks).toEqual([3, 4, 5])
+    expect(bounds.xTicks).toEqual([3, 4])
     expect(bounds.yTicks).toEqual([...bounds.yTicks].sort((a, b) => a - b))
   })
   it('keeps a common fitted range across scenario switches when locked', () => {

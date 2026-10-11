@@ -1,18 +1,25 @@
-import type { Initiative, Portfolio, ScenarioKey } from '../types'
+import type { ImpactAssessment, Initiative, Portfolio, ScenarioKey } from '../types'
 import { demoPortfolio } from './data'
 import { pilotTotal, readiness } from './assessment'
 import { normalizeClassification } from './classification'
 import { normalizeDelivery } from './delivery'
+import { effectiveImpact, guides, selectedAssumptions, suggestImpact } from './impactGuide'
 const KEY='ai-portfolio-explorer:v1'
 const WORKSPACE_KEY='ai-portfolio-explorer:workspace-v1'
 export type SavedWorkspace={portfolios:Portfolio[];activeId:string}
+function validImpactAssessment(value:unknown):value is ImpactAssessment{
+  if(!value||typeof value!=='object')return false
+  const a=value as ImpactAssessment
+  if(!Object.hasOwn(guides,a.guide)||!['suggested','confirmed'].includes(a.mode)||!a.assumptions||typeof a.assumptions!=='object'||(a.confirmedImpact!==null&&(!Number.isInteger(a.confirmedImpact)||a.confirmedImpact<1||a.confirmedImpact>5))||typeof a.confirmationRationale!=='string'||typeof a.economicRationale!=='string'||typeof a.uncertainty!=='string'||typeof a.pilotValidation!=='string')return false
+  return guides[a.guide].fields.every(field=>{const x=a.assumptions[field.key];return x&&(x.value===null||field.choices.some(choice=>choice.value===x.value))&&['Observed','External benchmark','Expert judgment','Unknown'].includes(x.source)&&typeof x.reference==='string'&&typeof x.rationale==='string'&&typeof x.pilotValidation==='string'})
+}
 export function validatePortfolio(value:unknown):value is Portfolio {
   if (!value || typeof value!=='object') return false
   const p=value as Portfolio
   return typeof p.id==='string' && typeof p.name==='string' && Array.isArray(p.initiatives) && p.initiatives.every(i=>
     i && typeof i.id==='string' && typeof i.name==='string' && typeof i.region==='string' && typeof i.businessUnit==='string' && typeof i.function==='string' && typeof i.archived==='boolean' && Array.isArray(i.secondary) && i.urgencyInputs && i.phases && i.scenarios && ['conservative','base','optimistic'].every(k=> {
       const s=i.scenarios[k as ScenarioKey]
-      return s && (s.impact===null || typeof s.impact==='number') && (s.months===null || typeof s.months==='number') && (s.pilotCost===null || typeof s.pilotCost==='number') && (s.urgency===null || ['Low','Moderate','High','Critical'].includes(s.urgency)) && ['simple','advanced'].includes(s.costMode) && s.costs && typeof s.costs==='object' && ['development','integration','data','software','internalTeam','testing','training','evaluation','other','contingency'].every(c=>typeof s.costs[c as keyof typeof s.costs]==='number') && typeof s.assumptions==='string'
+      return s && (s.impact===null || typeof s.impact==='number') && (s.months===null || typeof s.months==='number') && (s.pilotCost===null || typeof s.pilotCost==='number') && (s.urgency===null || ['Low','Moderate','High','Critical'].includes(s.urgency)) && ['simple','advanced'].includes(s.costMode) && s.costs && typeof s.costs==='object' && ['development','integration','data','software','internalTeam','testing','training','evaluation','other','contingency'].every(c=>typeof s.costs[c as keyof typeof s.costs]==='number') && typeof s.assumptions==='string' && (s.impactAssessment===undefined||validImpactAssessment(s.impactAssessment))
     }) && i.feasibility && typeof i.feasibility==='object' && i.evidence && typeof i.evidence==='object')
 }
 export function migratePortfolio(portfolio:Portfolio):Portfolio {
@@ -46,4 +53,5 @@ export function parseImport(raw:string):Portfolio {const value=JSON.parse(raw);i
 export function download(name:string,content:string,type:string){const blob=new Blob([content],{type});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000)}
 export function exportJson(p:Portfolio){download('ai-initiative-portfolio.json',JSON.stringify(p,null,2),'application/json')}
 const csvCell=(x:unknown)=>`"${String(x??'').replaceAll('"','""')}"`
-export function exportCsv(p:Portfolio,key:ScenarioKey){const columns=['Initiative','Region / scope','Subregion','Covered regions','Business unit','Business function','Archetype','Impact (1–5)','Months to value','Pilot investment EUR','Urgency','Readiness','Scenario','Assumptions'];const rows=p.initiatives.filter(i=>!i.archived).map(i=>{const s=i.scenarios[key];return [i.name,i.region,i.subregion,i.coveredRegions.join('; '),i.businessUnit,i.function,i.archetype,s.impact,s.months,pilotTotal(s),s.urgency,readiness(i),key,s.assumptions].map(csvCell).join(',')});download(`portfolio-${key}.csv`,[columns.map(csvCell).join(','),...rows].join('\r\n'),'text/csv;charset=utf-8')}
+export function portfolioCsv(p:Portfolio,key:ScenarioKey){const columns=['Initiative','Region / scope','Subregion','Covered regions','Business unit','Business function','Archetype','Effective impact (1–5)','Suggested impact (1–5)','Impact mode','Impact assumptions','Economic rationale','Principal uncertainty','Pilot validation','Management confirmation rationale','Months to value','Pilot investment EUR','Urgency','Readiness','Scenario','Scenario notes'];const rows=p.initiatives.filter(i=>!i.archived).map(i=>{const s=i.scenarios[key],a=s.impactAssessment;return [i.name,i.region,i.subregion,i.coveredRegions.join('; '),i.businessUnit,i.function,i.archetype,effectiveImpact(i,key),a?suggestImpact(a).score:null,a?.mode??'manual',a?selectedAssumptions(a).map(x=>`${x.field.label}: ${x.label} [${x.record?.source||'Unknown'}]`).join('; '):'',a?.economicRationale??s.impactRationale,a?.uncertainty??i.validationAssumptions,a?.pilotValidation??'',a?.confirmationRationale??'',s.months,pilotTotal(s),s.urgency,readiness(i),key,s.assumptions].map(csvCell).join(',')});return [columns.map(csvCell).join(','),...rows].join('\r\n')}
+export function exportCsv(p:Portfolio,key:ScenarioKey){download(`portfolio-${key}.csv`,portfolioCsv(p,key),'text/csv;charset=utf-8')}

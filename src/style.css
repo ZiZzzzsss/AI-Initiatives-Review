@@ -130,3 +130,25 @@
 .timeline-editor-row input{width:100%}
 @media(max-width:900px){.delivery-card-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:600px){.delivery-card-grid,.decision-grid,.timeline-milestones{grid-template-columns:1fr}.timeline-editor-head,.timeline-editor-row{grid-template-columns:minmax(110px,1fr) 78px 78px;gap:5px}.timeline-scale,.timeline-row{grid-template-columns:minmax(105px,38%) 1fr}}
+.impact-guide{padding:16px;border:1px solid #dce9e3;border-radius:9px;background:#f8fbf9;margin:9px 0}
+.impact-guide h3{font-size:15px;color:#275b55;margin:0 0 6px}
+.impact-guide>p,.impact-suggestion p,.impact-evidence p{font-size:12px;line-height:1.5;color:#58736c}
+.impact-guide-fields{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:15px 0}
+.impact-guide-fields .field{min-width:0}
+.impact-guide-fields select{min-width:0;width:100%}
+.impact-suggestion{padding:11px 13px;border-radius:7px;background:#eaf4ee;color:#285e55}
+.impact-suggestion p{margin:5px 0 0}
+.impact-confirm{display:grid;grid-template-columns:minmax(150px,1fr) 2fr;gap:12px;margin:12px 0}
+.impact-context{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:15px 0}
+.impact-context textarea,.impact-confirm textarea{width:100%}
+.impact-evidence,.impact-background{border-top:1px solid #dce9e3;padding-top:10px}
+.impact-evidence summary,.impact-background summary,.guidance summary,.impact-insights summary{cursor:pointer;font-weight:700;color:#2c5e56}
+.impact-evidence-row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px 10px;padding:12px 0;border-top:1px solid #e1ebe6}
+.impact-evidence-row b,.impact-evidence-row p{grid-column:1/-1;margin:0}
+.impact-evidence-row input,.impact-evidence-row select{width:100%;min-width:0}
+.impact-background .form-grid{margin-top:12px}
+.impact-insights{background:#f7faf8;border-radius:7px;padding:11px}
+.impact-insights ul{padding-left:18px;margin:8px 0}
+.impact-insights li,.impact-insights p{font-size:11px;line-height:1.55;color:#526c66}
+.impact-evidence-warning{color:#9a6532!important}
+@media(max-width:760px){.impact-guide-fields,.impact-context,.impact-confirm{grid-template-columns:1fr}.impact-evidence-row{grid-template-columns:1fr}}

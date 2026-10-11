@@ -2,6 +2,13 @@ export type ScenarioKey = 'conservative' | 'base' | 'optimistic'
 export type Urgency = 'Low' | 'Moderate' | 'High' | 'Critical'
 export type CheckState = 'Confirmed' | 'Unconfirmed' | 'Blocked' | 'Not Applicable'
 export type EvidenceSource = 'Observed' | 'External benchmark' | 'Expert judgment' | 'Unknown'
+export type ImpactGuide = 'pricing' | 'crm' | 'pitch' | 'generic'
+export type ImpactAssumption = { value: string | null; source: EvidenceSource; reference: string; rationale: string; pilotValidation: string }
+export type ImpactAssessment = {
+  guide: ImpactGuide; mode: 'suggested' | 'confirmed'; assumptions: Record<string, ImpactAssumption>;
+  confirmedImpact: number | null; confirmationRationale: string;
+  economicRationale: string; uncertainty: string; pilotValidation: string
+}
 export type Archetype = 'Productivity Accelerator' | 'Sales Growth Accelerator' | 'Revenue & Margin Optimizer' | 'Customer Value Protector' | 'Strategic Enabler' | 'Workflow Transformer' | 'New Growth Innovator' | 'Risk & Resilience Safeguard'
 export type Descriptor = 'Quick Win' | 'High-Impact Opportunity' | 'Critical Fix' | 'Long-Horizon Opportunity' | 'Exploratory Initiative'
 export type CostKey = 'development' | 'integration' | 'data' | 'software' | 'internalTeam' | 'testing' | 'training' | 'evaluation' | 'other' | 'contingency'
@@ -19,6 +26,7 @@ export type TimelinePhaseKey = 'discoveryData' | 'development' | 'integration' |
 export type TimelinePhase = { start: number | null; duration: number | null }
 export type DeliveryTimeline = { phases: Record<TimelinePhaseKey, TimelinePhase>; pilotCompletion: number | null; evidenceReady: number | null; timingAssumptions: string }
 export type Scenario = {
+  impactAssessment?: ImpactAssessment;
   impact: number | null; months: number | null; pilotCost: number | null; costMode: 'simple' | 'advanced'; costs: Record<CostKey, number>;
   urgency: Urgency | null; urgencyRationale: string; impactRationale: string; timeRationale: string;
   improvement: string; adoption: string; assumptions: string; rolloutCost: number | null; operatingCost: number | null;

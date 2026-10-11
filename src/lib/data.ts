@@ -2,6 +2,7 @@ import type { Archetype, CheckState, Initiative, Portfolio, Scenario, ScenarioKe
 import { evidenceLabels, feasibilityLabels } from './metadata'
 import { normalizeClassification } from './classification'
 import { blankDeliveryAssessment, blankDeliveryTimeline } from './delivery'
+import { newImpactAssessment } from './impactGuide'
 import type { DeliveryAssessment, DeliveryTimeline, TimelinePhaseKey } from '../types'
 const emptyCosts = () => ({ development:0,integration:0,data:0,software:0,internalTeam:0,testing:0,training:0,evaluation:0,other:0,contingency:0 })
 export const blankScenario = (): Scenario => ({ impact:null,months:null,pilotCost:null,costMode:'simple',costs:emptyCosts(),urgency:null,urgencyRationale:'',impactRationale:'',timeRationale:'',improvement:'',adoption:'',assumptions:'',rolloutCost:null,operatingCost:null,pilotMonths:null,broaderMonths:null,firstValueDate:'',timeline:blankDeliveryTimeline() })
@@ -74,6 +75,26 @@ export function demoPortfolio(): Portfolio {
     conservative:demoTimeline({discoveryData:[0,4],development:[2,5],integration:[4,5],pilot:[7,4],evaluation:[10,3],adoption:[12,2],rollout:[14,8]},11,13,'Data and integration issues extend validation and the evidence window.'),
     base:demoTimeline({discoveryData:[0,3],development:[2,4],integration:[4,3],pilot:[6,3],evaluation:[8,2],adoption:[9,1],rollout:[10,8]},9,10,'The control design starts early and evidence is assessed after a bounded pilot.'),
     optimistic:demoTimeline({discoveryData:[0,2],development:[1,3],integration:[3,3],pilot:[5,2],evaluation:[7,1],adoption:[7,1],rollout:[8,6]},7,8,'Earlier data access and limited-market integration shorten validation.'),
+  })
+  const impactCases = [
+    {item:pitch,guide:'pitch' as const,cases:[
+      {effort:'limited',realization:'low',reach:'limited'},
+      {effort:'moderate',realization:'moderate',reach:'regional'},
+      {effort:'significant',realization:'high',reach:'multi'},
+    ],context:{economicRationale:'Time savings matter economically only when released capacity serves qualified demand or leads to realizable operating savings.',uncertainty:'Whether net time savings survive review and generate additional profitable work.',pilotValidation:'Compare drafting and review effort with current practice; track redeployment, qualified demand and realized savings.'}},
+    {item:crm,guide:'crm' as const,cases:[
+      {bottleneck:'moderate',effectiveness:'moderate',reach:'regional'},
+      {bottleneck:'high',effectiveness:'moderate',reach:'multi'},
+      {bottleneck:'high',effectiveness:'significant',reach:'multi'},
+    ],context:{economicRationale:'Better CRM records create economic value only if they measurably improve relevant commercial decisions or sales effectiveness.',uncertainty:'Whether data quality is a binding constraint on sales outcomes.',pilotValidation:'Measure record quality and usage, then compare sales effectiveness with a credible baseline or comparison group.'}},
+    {item:pricing,guide:'pricing' as const,cases:[
+      {incremental:'small',reach:'limited',capture:'uncertain'},
+      {incremental:'moderate',reach:'multi',capture:'moderate'},
+      {incremental:'significant',reach:'global',capture:'high'},
+    ],context:{economicRationale:'Only pricing gains beyond existing revenue management, and the part captured as Accor contribution, support impact.',uncertainty:'Incremental performance versus current pricing systems and Accor capture.',pilotValidation:'Compare participating hotels with a credible control and verify the contribution pathway.'}},
+  ]
+  for(const {item,guide,cases,context} of impactCases)(['conservative','base','optimistic'] as const).forEach((key,index)=>{
+    item.scenarios[key].impactAssessment=newImpactAssessment(guide,cases[index],context,'Expert judgment')
   })
   return {id:'demo',name:'Illustrative Accor AI portfolio',initiatives:[pitch,crm,pricing]}
 }
