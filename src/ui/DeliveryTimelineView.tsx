@@ -11,7 +11,7 @@ export default function DeliveryTimelineView({scenario}:{scenario:Scenario}){
     <div className="timeline-milestones">
       <div><span>Pilot completion</span><b>{displayMonth(timeline.pilotCompletion)}</b></div>
       <div><span>Decision-ready evidence</span><b>{displayMonth(timeline.evidenceReady)}</b></div>
-      <div><span>First meaningful value · chart Y</span><b>{displayMonth(scenario.months)}</b></div>
+      <div><span>First meaningful value</span><b>{displayMonth(scenario.months)}</b></div>
     </div>
     {timelineHasEstimates(timeline)?<>
       <div className="timeline-scale"><span/><div>{ticks.map((tick,index)=><span key={index}>{tick}</span>)}</div></div>

@@ -1,5 +1,5 @@
 import { describe, expect, it, beforeEach, vi } from 'vitest'
-import { bubbleRadius, compareSummary, isComplete, pilotTotal, readiness, suggestDescriptor, suggestUrgency, validImpact, validMonths, yPosition } from './assessment'
+import { bubbleRadius, compareSummary, fundingGateLabel, isComplete, pilotGateLabels, pilotGateState, pilotHardGateStatus, pilotTotal, readiness, suggestDescriptor, suggestUrgency, validImpact, validMonths, yPosition } from './assessment'
 import { blankInitiative, cloneInitiative, demoPortfolio } from './data'
 import { deleteInitiative, upsertInitiative } from './portfolio'
 import { loadWorkspace, parseImport, resetWorkspace, saveWorkspace, validatePortfolio } from './storage'
@@ -14,6 +14,31 @@ describe('management assessments',()=>{
   it('keeps suggested and confirmed urgency distinct',()=>{const i=blankInitiative();i.urgencyInputs.severity='High';i.urgencyInputs.workaround='Temporary process';i.urgencyInputs.workaroundEffectiveness='High';i.scenarios.base.urgency='Critical';i.scenarios.base.urgencyRationale='Override: committed seasonal deadline';expect(suggestUrgency(i).level).toBe('Moderate');expect(i.scenarios.base.urgency).toBe('Critical');expect(i.scenarios.base.urgencyRationale).toContain('Override')})
   it('suggests a descriptor without changing the confirmed choice',()=>{const i=demoPortfolio().initiatives[2];i.descriptor=null;expect(suggestDescriptor(i)?.name).toBe('High-Impact Opportunity');expect(i.descriptor).toBeNull()})
   it('flags blocked feasibility separately from impact',()=>{const i=demoPortfolio().initiatives[0];i.feasibility['Required data available']='Blocked';expect(readiness(i)).toBe('Blocked');expect(i.scenarios.base.impact).toBe(3)})
+  it('uses the same seven pilot checks for every initiative and excludes funding',()=>{
+    expect(pilotGateLabels).toHaveLength(7)
+    expect(pilotGateLabels).not.toContain(fundingGateLabel)
+    for(const item of demoPortfolio().initiatives){
+      for(const label of pilotGateLabels)item.feasibility[label]='Confirmed'
+      expect(pilotHardGateStatus(item)).toBe('Passed')
+      item.feasibility[pilotGateLabels[0]]='Unconfirmed'
+      expect(pilotHardGateStatus(item)).toBe('Pending')
+      item.feasibility[pilotGateLabels[1]]='Blocked'
+      expect(pilotHardGateStatus(item)).toBe('Blocked')
+    }
+  })
+  it('excludes explicit not applicable and pending funding, but never assumes an unanswered gate passed',()=>{
+    const item=blankInitiative()
+    for(const label of pilotGateLabels)item.feasibility[label]='Confirmed'
+    item.feasibility[fundingGateLabel]='Unconfirmed'
+    item.feasibility[pilotGateLabels[0]]='Not Applicable'
+    expect(pilotGateState(item,pilotGateLabels[0])).toBe('Not Applicable')
+    expect(pilotHardGateStatus(item)).toBe('Passed')
+    delete item.feasibility[pilotGateLabels[1]]
+    expect(pilotGateState(item,pilotGateLabels[1])).toBe('Unconfirmed')
+    expect(pilotHardGateStatus(item)).toBe('Pending')
+    for(const label of pilotGateLabels)item.feasibility[label]='Not Applicable'
+    expect(pilotHardGateStatus(item)).toBe('Pending')
+  })
   it('compares trade-offs without selecting a winner',()=>{const p=demoPortfolio();const text=compareSummary([p.initiatives[0],p.initiatives[2]],'base');expect(text).toContain('higher assessed impact');expect(text).toContain('reaches meaningful value sooner');expect(text).toContain('preferred investment depends')})
 })
 describe('portfolio lifecycle',()=>{
